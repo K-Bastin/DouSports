@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.*
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
-import com.dousports.app.ui.screens.calendar.CalendarScreen
 import com.dousports.app.ui.screens.exercises.ExerciseDetailScreen
 import com.dousports.app.ui.screens.exercises.ExercisesScreen
 import com.dousports.app.ui.screens.home.HomeScreen
@@ -40,7 +39,6 @@ sealed class Screen(val route: String) {
             if (exerciseId != null) "create-exercise?exerciseId=$exerciseId" else "create-exercise"
     }
     object Stats : Screen("stats")
-    object Calendar : Screen("calendar")
     object Profile : Screen("profile")
 }
 
@@ -54,7 +52,6 @@ val bottomNavItems = listOf(
     BottomNavItem("Accueil", Icons.Default.Home, Screen.Home.route),
     BottomNavItem("Exercices", Icons.Default.FitnessCenter, Screen.Exercises.route),
     BottomNavItem("Routines", Icons.Default.ListAlt, Screen.Routines.route),
-    BottomNavItem("Calendrier", Icons.Default.CalendarMonth, Screen.Calendar.route),
     BottomNavItem("Profil", Icons.Default.Person, Screen.Profile.route)
 )
 
@@ -208,10 +205,6 @@ fun DouSportsNavGraph() {
 
             composable(Screen.Stats.route) {
                 StatsScreen()
-            }
-
-            composable(Screen.Calendar.route) {
-                CalendarScreen()
             }
 
             composable(Screen.Profile.route) {
