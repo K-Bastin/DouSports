@@ -53,6 +53,12 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE id = :id")
     fun getExerciseByIdFlow(id: String): Flow<ExerciseEntity?>
 
+    @Query("SELECT DISTINCT target FROM exercises WHERE target != '' ORDER BY target ASC")
+    suspend fun getAllTargets(): List<String>
+
+    @Query("SELECT DISTINCT muscleGroup FROM exercises WHERE muscleGroup != '' ORDER BY muscleGroup ASC")
+    suspend fun getAllMuscleGroups(): List<String>
+
     @Query("SELECT COUNT(*) FROM exercises")
     suspend fun count(): Int
 }

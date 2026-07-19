@@ -1,6 +1,11 @@
 package com.dousports.app.ui.screens.exercises
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -12,13 +17,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.ui.theme.OrangeEnergy
@@ -26,8 +38,11 @@ import com.dousports.app.utils.secondaryMusclesList
 import com.dousports.app.utils.stepsAsList
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
@@ -35,12 +50,14 @@ data class CreateExerciseUiState(
     val name: String = "",
     val bodyPart: String = "",
     val equipment: String = "",
-    val target: String = "",
-    val muscleGroup: String = "",
-    val secondaryMuscles: String = "",
+    val selectedTarget: String = "",
+    val selectedMuscleGroup: String = "",
+    val selectedSecondaryMuscles: List<String> = emptyList(),
+    val gifPath: String = "",
     val steps: List<String> = listOf(""),
     val existingBodyParts: List<String> = emptyList(),
     val existingEquipment: List<String> = emptyList(),
+    val allMuscleOptions: List<String> = emptyList(),
     val nameError: Boolean = false,
     val bodyPartError: Boolean = false,
     val isSaving: Boolean = false,
@@ -51,7 +68,8 @@ data class CreateExerciseUiState(
 
 @HiltViewModel
 class CreateExerciseViewModel @Inject constructor(
-    private val repository: ExerciseRepository
+    private val repository: ExerciseRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateExerciseUiState())
@@ -61,7 +79,16 @@ class CreateExerciseViewModel @Inject constructor(
         viewModelScope.launch {
             val bodyParts = repository.getAllBodyParts()
             val equipment = repository.getAllEquipment()
-            _uiState.update { it.copy(existingBodyParts = bodyParts, existingEquipment = equipment) }
+            val targets = repository.getAllTargets()
+            val muscleGroups = repository.getAllMuscleGroups()
+            val allMuscles = (targets + muscleGroups).distinct().sorted()
+            _uiState.update {
+                it.copy(
+                    existingBodyParts = bodyParts,
+                    existingEquipment = equipment,
+                    allMuscleOptions = allMuscles
+                )
+            }
         }
     }
 
@@ -75,9 +102,10 @@ class CreateExerciseViewModel @Inject constructor(
                     name = ex.name,
                     bodyPart = ex.bodyPart,
                     equipment = ex.equipment,
-                    target = ex.target,
-                    muscleGroup = ex.muscleGroup,
-                    secondaryMuscles = ex.secondaryMusclesList().joinToString(", "),
+                    selectedTarget = ex.target,
+                    selectedMuscleGroup = ex.muscleGroup,
+                    selectedSecondaryMuscles = ex.secondaryMusclesList(),
+                    gifPath = ex.gifPath,
                     steps = ex.stepsAsList().ifEmpty { listOf("") }
                 )
             }
@@ -87,9 +115,43 @@ class CreateExerciseViewModel @Inject constructor(
     fun updateName(v: String) = _uiState.update { it.copy(name = v, nameError = false) }
     fun updateBodyPart(v: String) = _uiState.update { it.copy(bodyPart = v, bodyPartError = false) }
     fun updateEquipment(v: String) = _uiState.update { it.copy(equipment = v) }
-    fun updateTarget(v: String) = _uiState.update { it.copy(target = v) }
-    fun updateMuscleGroup(v: String) = _uiState.update { it.copy(muscleGroup = v) }
-    fun updateSecondaryMuscles(v: String) = _uiState.update { it.copy(secondaryMuscles = v) }
+
+    fun selectTarget(value: String) = _uiState.update {
+        it.copy(selectedTarget = if (it.selectedTarget == value) "" else value)
+    }
+
+    fun selectMuscleGroup(value: String) = _uiState.update {
+        it.copy(selectedMuscleGroup = if (it.selectedMuscleGroup == value) "" else value)
+    }
+
+    fun toggleSecondaryMuscle(muscle: String) = _uiState.update {
+        val updated = if (muscle in it.selectedSecondaryMuscles)
+            it.selectedSecondaryMuscles - muscle
+        else
+            it.selectedSecondaryMuscles + muscle
+        it.copy(selectedSecondaryMuscles = updated)
+    }
+
+    fun onGifSelected(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val oldPath = _uiState.value.gifPath
+            if (oldPath.isNotBlank()) File(oldPath).delete()
+            val destDir = File(context.filesDir, "custom_exercises").also { it.mkdirs() }
+            val destFile = File(destDir, "${UUID.randomUUID()}.gif")
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                _uiState.update { it.copy(gifPath = destFile.absolutePath) }
+            } catch (_: Exception) { }
+        }
+    }
+
+    fun clearGif() {
+        val oldPath = _uiState.value.gifPath
+        if (oldPath.isNotBlank()) viewModelScope.launch(Dispatchers.IO) { File(oldPath).delete() }
+        _uiState.update { it.copy(gifPath = "") }
+    }
 
     fun updateStep(index: Int, value: String) {
         val steps = _uiState.value.steps.toMutableList()
@@ -116,8 +178,6 @@ class CreateExerciseViewModel @Inject constructor(
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             val gson = Gson()
-            val secondaryList = s.secondaryMuscles
-                .split(",").map { it.trim() }.filter { it.isNotBlank() }
             val stepsList = s.steps.filter { it.isNotBlank() }
             val exercise = ExerciseEntity(
                 id = if (s.isEditMode) s.editId else "custom-${UUID.randomUUID()}",
@@ -125,12 +185,12 @@ class CreateExerciseViewModel @Inject constructor(
                 category = s.bodyPart.trim().lowercase(),
                 bodyPart = s.bodyPart.trim(),
                 equipment = s.equipment.trim().ifBlank { "body weight" },
-                target = s.target.trim(),
-                muscleGroup = s.muscleGroup.trim(),
-                secondaryMuscles = gson.toJson(secondaryList),
+                target = s.selectedTarget,
+                muscleGroup = s.selectedMuscleGroup,
+                secondaryMuscles = gson.toJson(s.selectedSecondaryMuscles),
                 instructionSteps = gson.toJson(stepsList),
-                imagePath = "",
-                gifPath = "",
+                imagePath = s.gifPath,
+                gifPath = s.gifPath,
                 mediaId = "",
                 isCustom = true
             )
@@ -141,7 +201,7 @@ class CreateExerciseViewModel @Inject constructor(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CreateExerciseScreen(
     exerciseId: String?,
@@ -149,6 +209,7 @@ fun CreateExerciseScreen(
     viewModel: CreateExerciseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(exerciseId) {
         if (exerciseId != null) viewModel.loadForEdit(exerciseId)
@@ -157,6 +218,16 @@ fun CreateExerciseScreen(
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) onBack()
     }
+
+    val gifLoader = remember(context) {
+        ImageLoader.Builder(context)
+            .components { add(GifDecoder.Factory()) }
+            .build()
+    }
+
+    val gifPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> if (uri != null) viewModel.onGifSelected(uri) }
 
     Scaffold(
         topBar = {
@@ -183,6 +254,78 @@ fun CreateExerciseScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
+            // --- Animation ---
+            item {
+                Text(
+                    "Animation",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { gifPickerLauncher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (uiState.gifPath.isNotBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(File(uiState.gifPath))
+                                    .crossfade(true)
+                                    .build(),
+                                imageLoader = gifLoader,
+                                contentDescription = "Animation",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Modifier",
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.45f))
+                                    .padding(6.dp),
+                                tint = Color.White
+                            )
+                        } else {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.AddPhotoAlternate,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Ajouter une animation (optionnel)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (uiState.gifPath.isNotBlank()) {
+                        TextButton(onClick = viewModel::clearGif) {
+                            Text("Retirer l'animation", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+
+            // --- Informations ---
             item {
                 Text(
                     "Informations",
@@ -231,67 +374,49 @@ fun CreateExerciseScreen(
                 )
             }
 
-            item {
-                OutlinedTextField(
-                    value = uiState.target,
-                    onValueChange = viewModel::updateTarget,
-                    label = { Text("Muscle cible") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = OrangeEnergy,
-                        cursorColor = OrangeEnergy
-                    )
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = uiState.muscleGroup,
-                    onValueChange = viewModel::updateMuscleGroup,
-                    label = { Text("Groupe musculaire") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = OrangeEnergy,
-                        cursorColor = OrangeEnergy
-                    )
-                )
-            }
-
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
 
+            // --- Muscles ---
             item {
                 Text(
-                    "Muscles secondaires",
+                    "Muscles",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
 
             item {
-                OutlinedTextField(
-                    value = uiState.secondaryMuscles,
-                    onValueChange = viewModel::updateSecondaryMuscles,
-                    label = { Text("Muscles secondaires") },
-                    placeholder = { Text("ex: biceps, triceps, deltoïdes") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = OrangeEnergy,
-                        cursorColor = OrangeEnergy
-                    )
+                ChipSelectSection(
+                    title = "Muscle cible",
+                    options = uiState.allMuscleOptions,
+                    selected = if (uiState.selectedTarget.isNotBlank())
+                        listOf(uiState.selectedTarget) else emptyList(),
+                    onToggle = viewModel::selectTarget
+                )
+            }
+
+            item {
+                ChipSelectSection(
+                    title = "Groupe musculaire",
+                    options = uiState.allMuscleOptions,
+                    selected = if (uiState.selectedMuscleGroup.isNotBlank())
+                        listOf(uiState.selectedMuscleGroup) else emptyList(),
+                    onToggle = viewModel::selectMuscleGroup
+                )
+            }
+
+            item {
+                ChipSelectSection(
+                    title = "Muscles secondaires (multi-sélection)",
+                    options = uiState.allMuscleOptions,
+                    selected = uiState.selectedSecondaryMuscles,
+                    onToggle = viewModel::toggleSecondaryMuscle
                 )
             }
 
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
 
+            // --- Instructions ---
             item {
                 Text(
                     "Instructions",
@@ -346,7 +471,6 @@ fun CreateExerciseScreen(
                             }
                         }
                     }
-
                     TextButton(
                         onClick = viewModel::addStep,
                         modifier = Modifier.align(Alignment.End)
@@ -358,6 +482,7 @@ fun CreateExerciseScreen(
                 }
             }
 
+            // --- Bouton enregistrer ---
             item {
                 Spacer(Modifier.height(8.dp))
                 Button(
@@ -382,6 +507,46 @@ fun CreateExerciseScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChipSelectSection(
+    title: String,
+    options: List<String>,
+    selected: List<String>,
+    onToggle: (String) -> Unit
+) {
+    if (options.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            options.forEach { option ->
+                val isSelected = option in selected
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onToggle(option) },
+                    label = {
+                        Text(
+                            option.replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = OrangeEnergy,
+                        selectedLabelColor = Color.White
+                    )
+                )
             }
         }
     }

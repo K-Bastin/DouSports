@@ -29,6 +29,7 @@ import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.imageUrl
+import java.io.File
 
 @Composable
 fun ExercisesScreen(
@@ -166,20 +167,35 @@ private fun ExerciseCard(
     ) {
         Column {
             if (exercise.isCustom) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(130.dp)
-                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                        .background(OrangeEnergy.copy(alpha = 0.08f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.FitnessCenter,
-                        contentDescription = null,
-                        modifier = Modifier.size(44.dp),
-                        tint = OrangeEnergy.copy(alpha = 0.4f)
+                if (exercise.gifPath.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(File(exercise.gifPath))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = exercise.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                            .background(OrangeEnergy.copy(alpha = 0.08f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            modifier = Modifier.size(44.dp),
+                            tint = OrangeEnergy.copy(alpha = 0.4f)
+                        )
+                    }
                 }
             } else {
                 AsyncImage(

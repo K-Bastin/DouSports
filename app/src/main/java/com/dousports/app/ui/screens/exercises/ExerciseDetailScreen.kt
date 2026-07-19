@@ -29,6 +29,7 @@ import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.gifUrl
+import java.io.File
 import com.dousports.app.utils.secondaryMusclesList
 import com.dousports.app.utils.stepsAsList
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -155,26 +156,47 @@ fun ExerciseDetailScreen(
             ) {
                 item {
                     if (ex.isCustom) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(280.dp)
-                                .background(OrangeEnergy.copy(alpha = 0.08f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.Default.FitnessCenter,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(72.dp),
-                                    tint = OrangeEnergy.copy(alpha = 0.4f)
+                        if (ex.gifPath.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(280.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(File(ex.gifPath))
+                                        .crossfade(true)
+                                        .build(),
+                                    imageLoader = gifLoader,
+                                    contentDescription = ex.name,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
                                 )
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    "Exercice personnalisé",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = OrangeEnergy.copy(alpha = 0.6f)
-                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(280.dp)
+                                    .background(OrangeEnergy.copy(alpha = 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.FitnessCenter,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(72.dp),
+                                        tint = OrangeEnergy.copy(alpha = 0.4f)
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        "Exercice personnalisé",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = OrangeEnergy.copy(alpha = 0.6f)
+                                    )
+                                }
                             }
                         }
                     } else {
