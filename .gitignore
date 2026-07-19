@@ -6,3 +6,18 @@ __pycache__/
 
 # Claude Code local settings (do not publish)
 .claude/
+
+# Android
+*.iml
+.gradle/
+local.properties
+.idea/
+app/build/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+!debug.keystore
