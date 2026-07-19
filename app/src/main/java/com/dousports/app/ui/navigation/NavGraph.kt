@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.*
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.dousports.app.ui.screens.calendar.CalendarScreen
 import com.dousports.app.ui.screens.exercises.ExerciseDetailScreen
@@ -61,7 +62,8 @@ val bottomNavItems = listOf(
 fun DouSportsNavGraph() {
     val navController = rememberNavController()
     val currentBackStack by navController.currentBackStackEntryAsState()
-    val currentRoute = currentBackStack?.destination?.route
+    val currentDestination = currentBackStack?.destination
+    val currentRoute = currentDestination?.route
 
     val showBottomBar = currentRoute in bottomNavItems.map { it.route }
 
@@ -70,17 +72,20 @@ fun DouSportsNavGraph() {
             if (showBottomBar) {
                 NavigationBar {
                     bottomNavItems.forEach { item ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                         NavigationBarItem(
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { Text(item.label) },
-                            selected = currentRoute == item.route,
+                            selected = selected,
                             onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
+                                if (!selected) {
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
                             }
                         )
@@ -100,7 +105,13 @@ fun DouSportsNavGraph() {
                         navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
                     },
                     onNavigateToRoutines = {
-                        navController.navigate(Screen.Routines.route)
+                        navController.navigate(Screen.Routines.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }
