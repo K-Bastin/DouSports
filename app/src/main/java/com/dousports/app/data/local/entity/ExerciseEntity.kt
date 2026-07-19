@@ -16,5 +16,6 @@ data class ExerciseEntity(
     val instructionSteps: String,
     val imagePath: String,
     val gifPath: String,
-    val mediaId: String
+    val mediaId: String,
+    val isCustom: Boolean = false
 )

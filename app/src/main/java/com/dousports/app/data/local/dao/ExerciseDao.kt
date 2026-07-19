@@ -41,6 +41,18 @@ interface ExerciseDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(exercises: List<ExerciseEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExercise(exercise: ExerciseEntity)
+
+    @Update
+    suspend fun updateExercise(exercise: ExerciseEntity)
+
+    @Delete
+    suspend fun deleteExercise(exercise: ExerciseEntity)
+
+    @Query("SELECT * FROM exercises WHERE id = :id")
+    fun getExerciseByIdFlow(id: String): Flow<ExerciseEntity?>
+
     @Query("SELECT COUNT(*) FROM exercises")
     suspend fun count(): Int
 }
