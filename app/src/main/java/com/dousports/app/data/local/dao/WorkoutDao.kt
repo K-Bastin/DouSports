@@ -55,4 +55,10 @@ interface WorkoutDao {
 
     @Query("SELECT DISTINCT exerciseId FROM workout_sets")
     suspend fun getAllTrackedExerciseIds(): List<String>
+
+    @Query("SELECT * FROM workout_sessions WHERE startedAt >= :startMs AND startedAt < :endMs ORDER BY startedAt ASC")
+    suspend fun getSessionsInRange(startMs: Long, endMs: Long): List<WorkoutSessionEntity>
+
+    @Query("SELECT * FROM workout_sets WHERE sessionId = :sessionId ORDER BY exerciseId, setNumber ASC")
+    suspend fun getSetsForSessionSync(sessionId: Long): List<WorkoutSetEntity>
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.dousports.app.data.local.AppDatabase
 import com.dousports.app.data.local.dao.ExerciseDao
+import com.dousports.app.data.local.dao.ProfileDao
 import com.dousports.app.data.local.dao.RoutineDao
 import com.dousports.app.data.local.dao.WorkoutDao
 import dagger.Module
@@ -20,7 +21,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME).build()
+        Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME)
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideExerciseDao(db: AppDatabase): ExerciseDao = db.exerciseDao()
@@ -30,4 +33,7 @@ object DatabaseModule {
 
     @Provides
     fun provideWorkoutDao(db: AppDatabase): WorkoutDao = db.workoutDao()
+
+    @Provides
+    fun provideProfileDao(db: AppDatabase): ProfileDao = db.profileDao()
 }
