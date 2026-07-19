@@ -4,10 +4,14 @@ on:
   push:
     branches:
       - main
+      - develop
       - "claude/**"
+      - "fix/**"
+      - "feat/**"
   pull_request:
     branches:
       - main
+      - develop
 
 permissions:
   contents: read
