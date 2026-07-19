@@ -21,44 +21,55 @@ data class CalendarUiState(
     val isLoadingSets: Boolean = false
 )
 
+private data class YM(val year: Int, val month: Int)
+
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val repository: WorkoutRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CalendarUiState())
+    private val _ym = MutableStateFlow(
+        Calendar.getInstance().let { cal ->
+            YM(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1)
+        }
+    )
+
+    private val _uiState = MutableStateFlow(
+        Calendar.getInstance().let { cal ->
+            CalendarUiState(year = cal.get(Calendar.YEAR), month = cal.get(Calendar.MONTH) + 1)
+        }
+    )
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     init {
-        val now = Calendar.getInstance()
-        loadMonth(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1)
+        // Reactively rebuilds sessionsByDay whenever DB changes OR displayed month changes
+        viewModelScope.launch {
+            combine(_ym, repository.getAllSessions()) { ym, allSessions ->
+                allSessions
+                    .filter { s ->
+                        val cal = Calendar.getInstance().also { c -> c.timeInMillis = s.startedAt }
+                        cal.get(Calendar.YEAR) == ym.year && cal.get(Calendar.MONTH) + 1 == ym.month
+                    }
+                    .groupBy { s ->
+                        Calendar.getInstance().also { c -> c.timeInMillis = s.startedAt }
+                            .get(Calendar.DAY_OF_MONTH)
+                    }
+            }.collect { grouped ->
+                _uiState.update { it.copy(sessionsByDay = grouped) }
+            }
+        }
     }
 
     fun loadMonth(year: Int, month: Int) {
-        val cal = Calendar.getInstance().apply {
-            set(year, month - 1, 1, 0, 0, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startMs = cal.timeInMillis
-        cal.add(Calendar.MONTH, 1)
-        val endMs = cal.timeInMillis
-
-        viewModelScope.launch {
-            val sessions = repository.getSessionsInRange(startMs, endMs)
-            val grouped = sessions.groupBy { s ->
-                Calendar.getInstance().also { c -> c.timeInMillis = s.startedAt }
-                    .get(Calendar.DAY_OF_MONTH)
-            }
-            _uiState.update {
-                it.copy(
-                    year = year,
-                    month = month,
-                    sessionsByDay = grouped,
-                    selectedDay = null,
-                    selectedSession = null,
-                    setsForSession = emptyList()
-                )
-            }
+        _ym.value = YM(year, month)
+        _uiState.update {
+            it.copy(
+                year = year,
+                month = month,
+                selectedDay = null,
+                selectedSession = null,
+                setsForSession = emptyList()
+            )
         }
     }
 

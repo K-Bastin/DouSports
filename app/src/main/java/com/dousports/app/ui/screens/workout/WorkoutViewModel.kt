@@ -32,6 +32,7 @@ data class ActiveWorkoutUiState(
     val currentExerciseIndex: Int = 0,
     val elapsedSeconds: Long = 0L,
     val sessionId: Long? = null,
+    val sessionStartedAt: Long = 0L,
     val isLoading: Boolean = true,
     val isFinished: Boolean = false
 )
@@ -51,10 +52,12 @@ class WorkoutViewModel @Inject constructor(
             val routine = repository.getRoutineById(routineId) ?: return@launch
             val routineExercises = repository.getExercisesForRoutineSync(routineId)
 
+            val startedAt = System.currentTimeMillis()
             val sessionId = repository.insertSession(
                 WorkoutSessionEntity(
                     routineId = routineId,
-                    routineName = routine.name
+                    routineName = routine.name,
+                    startedAt = startedAt
                 )
             )
 
@@ -69,6 +72,7 @@ class WorkoutViewModel @Inject constructor(
                     routineName = routine.name,
                     exercises = exerciseStates,
                     sessionId = sessionId,
+                    sessionStartedAt = startedAt,
                     isLoading = false
                 )
             }
@@ -140,6 +144,7 @@ class WorkoutViewModel @Inject constructor(
                     id = sessionId,
                     routineId = state.routineId,
                     routineName = state.routineName,
+                    startedAt = state.sessionStartedAt,
                     finishedAt = System.currentTimeMillis(),
                     durationSeconds = duration
                 )
