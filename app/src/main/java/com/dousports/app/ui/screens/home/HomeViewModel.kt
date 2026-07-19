@@ -8,7 +8,6 @@ import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.utils.startOfWeekMillis
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -24,35 +23,23 @@ class HomeViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-
-    init {
-        loadData()
-    }
-
-    private fun loadData() {
-        viewModelScope.launch {
-            combine(
-                workoutRepository.getRecentSessions(5),
-                workoutRepository.getAllRoutines()
-            ) { sessions, routines ->
-                Pair(sessions, routines)
-            }.collect { (sessions, routines) ->
-                val since = startOfWeekMillis()
-                val weeklyCount = workoutRepository.countSessionsSince(since)
-                val weeklyVolume = workoutRepository.totalVolumeSince(since) ?: 0f
-
-                _uiState.update {
-                    it.copy(
-                        recentSessions = sessions,
-                        weeklyCount = weeklyCount,
-                        weeklyVolume = weeklyVolume,
-                        routines = routines,
-                        isLoading = false
-                    )
-                }
-            }
-        }
-    }
+    val uiState: StateFlow<HomeUiState> = combine(
+        workoutRepository.getRecentSessions(5),
+        workoutRepository.getAllRoutines()
+    ) { sessions, routines ->
+        val since = startOfWeekMillis()
+        val weeklyCount = workoutRepository.countSessionsSince(since)
+        val weeklyVolume = workoutRepository.totalVolumeSince(since) ?: 0f
+        HomeUiState(
+            recentSessions = sessions,
+            weeklyCount = weeklyCount,
+            weeklyVolume = weeklyVolume,
+            routines = routines,
+            isLoading = false
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = HomeUiState()
+    )
 }

@@ -72,4 +72,10 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getAllTrackedExerciseIds(): List<String> =
         workoutDao.getAllTrackedExerciseIds()
+
+    suspend fun getSessionsInRange(startMs: Long, endMs: Long): List<WorkoutSessionEntity> =
+        workoutDao.getSessionsInRange(startMs, endMs)
+
+    suspend fun getSetsForSessionSync(sessionId: Long): List<WorkoutSetEntity> =
+        workoutDao.getSetsForSessionSync(sessionId)
 }

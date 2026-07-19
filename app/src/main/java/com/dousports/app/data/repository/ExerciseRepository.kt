@@ -28,4 +28,16 @@ class ExerciseRepository @Inject constructor(
     suspend fun count(): Int = exerciseDao.count()
 
     suspend fun insertAll(exercises: List<ExerciseEntity>) = exerciseDao.insertAll(exercises)
+
+    suspend fun insertExercise(exercise: ExerciseEntity) = exerciseDao.insertExercise(exercise)
+
+    suspend fun updateExercise(exercise: ExerciseEntity) = exerciseDao.updateExercise(exercise)
+
+    suspend fun deleteExercise(exercise: ExerciseEntity) = exerciseDao.deleteExercise(exercise)
+
+    fun getExerciseByIdFlow(id: String) = exerciseDao.getExerciseByIdFlow(id)
+
+    suspend fun getAllTargets(): List<String> = exerciseDao.getAllTargets()
+
+    suspend fun getAllMuscleGroups(): List<String> = exerciseDao.getAllMuscleGroups()
 }

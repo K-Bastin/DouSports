@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,24 +29,39 @@ import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.gifUrl
+import java.io.File
 import com.dousports.app.utils.secondaryMusclesList
 import com.dousports.app.utils.stepsAsList
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class ExerciseDetailUiState(
+    val exercise: ExerciseEntity? = null,
+    val isDeleted: Boolean = false
+)
 
 @HiltViewModel
 class ExerciseDetailViewModel @Inject constructor(
     private val repository: ExerciseRepository
 ) : ViewModel() {
-    private val _exercise = MutableStateFlow<ExerciseEntity?>(null)
-    val exercise = _exercise.asStateFlow()
+    private val _uiState = MutableStateFlow(ExerciseDetailUiState())
+    val uiState = _uiState.asStateFlow()
 
     fun load(id: String) {
         viewModelScope.launch {
-            _exercise.value = repository.getExerciseById(id)
+            repository.getExerciseByIdFlow(id).collect { ex ->
+                _uiState.update { it.copy(exercise = ex) }
+            }
+        }
+    }
+
+    fun deleteExercise() {
+        val ex = _uiState.value.exercise ?: return
+        viewModelScope.launch {
+            repository.deleteExercise(ex)
+            _uiState.update { it.copy(isDeleted = true) }
         }
     }
 }
@@ -56,17 +71,50 @@ class ExerciseDetailViewModel @Inject constructor(
 fun ExerciseDetailScreen(
     exerciseId: String,
     onBack: () -> Unit,
+    onEditExercise: (String) -> Unit = {},
     viewModel: ExerciseDetailViewModel = hiltViewModel()
 ) {
-    val exercise by viewModel.exercise.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val exercise = uiState.exercise
     val context = LocalContext.current
 
     LaunchedEffect(exerciseId) { viewModel.load(exerciseId) }
+
+    LaunchedEffect(uiState.isDeleted) {
+        if (uiState.isDeleted) onBack()
+    }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     val gifLoader = remember(context) {
         ImageLoader.Builder(context)
             .components { add(GifDecoder.Factory()) }
             .build()
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Supprimer l'exercice") },
+            text = {
+                Text(
+                    "Voulez-vous supprimer \"${exercise?.name}\" ? Cette action est irréversible."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    viewModel.deleteExercise()
+                }) {
+                    Text("Supprimer", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -76,6 +124,20 @@ fun ExerciseDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Retour")
+                    }
+                },
+                actions = {
+                    if (exercise?.isCustom == true) {
+                        IconButton(onClick = { onEditExercise(exercise.id) }) {
+                            Icon(Icons.Default.Edit, "Modifier")
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                "Supprimer",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -93,39 +155,83 @@ fun ExerciseDetailScreen(
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
                 item {
-                    // GIF animation
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(280.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(ex.gifUrl())
-                                .crossfade(true)
-                                .build(),
-                            imageLoader = gifLoader,
-                            contentDescription = ex.name,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                    if (ex.isCustom) {
+                        if (ex.gifPath.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(280.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(File(ex.gifPath))
+                                        .crossfade(true)
+                                        .build(),
+                                    imageLoader = gifLoader,
+                                    contentDescription = ex.name,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(280.dp)
+                                    .background(OrangeEnergy.copy(alpha = 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.FitnessCenter,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(72.dp),
+                                        tint = OrangeEnergy.copy(alpha = 0.4f)
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        "Exercice personnalisé",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = OrangeEnergy.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(280.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(ex.gifUrl())
+                                    .crossfade(true)
+                                    .build(),
+                                imageLoader = gifLoader,
+                                contentDescription = ex.name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
 
                 item {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        // Tags row
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             InfoChip(label = ex.bodyPart, primary = true)
                             if (ex.equipment.isNotBlank()) InfoChip(label = ex.equipment)
                             if (ex.muscleGroup.isNotBlank()) InfoChip(label = ex.muscleGroup)
+                            if (ex.isCustom) InfoChip(label = "Perso")
                         }
 
                         Spacer(Modifier.height(16.dp))
 
-                        // Secondary muscles
                         val secondary = ex.secondaryMusclesList()
                         if (secondary.isNotEmpty()) {
                             Text(
@@ -142,7 +248,6 @@ fun ExerciseDetailScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
-                        // Instructions
                         val steps = ex.stepsAsList()
                         if (steps.isNotEmpty()) {
                             Text(
@@ -155,7 +260,7 @@ fun ExerciseDetailScreen(
                     }
                 }
 
-                val steps = exercise?.stepsAsList() ?: emptyList()
+                val steps = exercise.stepsAsList()
                 itemsIndexed(steps) { index, step ->
                     Row(
                         modifier = Modifier

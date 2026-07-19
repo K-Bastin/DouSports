@@ -9,8 +9,8 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,14 +29,17 @@ import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.imageUrl
+import java.io.File
 
 @Composable
 fun ExercisesScreen(
     onExerciseClick: (String) -> Unit,
+    onCreateExercise: () -> Unit,
     viewModel: ExercisesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -122,7 +125,7 @@ fun ExercisesScreen(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 88.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
@@ -135,6 +138,17 @@ fun ExercisesScreen(
                 }
             }
         }
+    }
+
+    FloatingActionButton(
+        onClick = onCreateExercise,
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(16.dp),
+        containerColor = OrangeEnergy
+    ) {
+        Icon(Icons.Default.Add, "Créer un exercice", tint = Color.White)
+    }
     }
 }
 
@@ -152,18 +166,51 @@ private fun ExerciseCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(exercise.imageUrl())
-                    .crossfade(true)
-                    .build(),
-                contentDescription = exercise.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-            )
+            if (exercise.isCustom) {
+                if (exercise.gifPath.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(File(exercise.gifPath))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = exercise.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                            .background(OrangeEnergy.copy(alpha = 0.08f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            modifier = Modifier.size(44.dp),
+                            tint = OrangeEnergy.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+            } else {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(exercise.imageUrl())
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = exercise.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                )
+            }
             Column(modifier = Modifier.padding(10.dp)) {
                 Text(
                     exercise.name,
@@ -178,6 +225,7 @@ private fun ExerciseCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     MiniChip(exercise.bodyPart)
+                    if (exercise.isCustom) MiniChip("Perso")
                 }
             }
         }

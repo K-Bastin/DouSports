@@ -9,9 +9,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.*
 import androidx.navigation.compose.*
+import com.dousports.app.ui.screens.calendar.CalendarScreen
 import com.dousports.app.ui.screens.exercises.ExerciseDetailScreen
 import com.dousports.app.ui.screens.exercises.ExercisesScreen
 import com.dousports.app.ui.screens.home.HomeScreen
+import com.dousports.app.ui.screens.profile.ProfileScreen
+import com.dousports.app.ui.screens.exercises.CreateExerciseScreen
 import com.dousports.app.ui.screens.routines.CreateRoutineScreen
 import com.dousports.app.ui.screens.routines.RoutinesScreen
 import com.dousports.app.ui.screens.stats.StatsScreen
@@ -31,7 +34,13 @@ sealed class Screen(val route: String) {
     object ActiveWorkout : Screen("active-workout/{routineId}") {
         fun createRoute(routineId: Long) = "active-workout/$routineId"
     }
+    object CreateExercise : Screen("create-exercise?exerciseId={exerciseId}") {
+        fun createRoute(exerciseId: String? = null) =
+            if (exerciseId != null) "create-exercise?exerciseId=$exerciseId" else "create-exercise"
+    }
     object Stats : Screen("stats")
+    object Calendar : Screen("calendar")
+    object Profile : Screen("profile")
 }
 
 data class BottomNavItem(
@@ -44,7 +53,8 @@ val bottomNavItems = listOf(
     BottomNavItem("Accueil", Icons.Default.Home, Screen.Home.route),
     BottomNavItem("Exercices", Icons.Default.FitnessCenter, Screen.Exercises.route),
     BottomNavItem("Routines", Icons.Default.ListAlt, Screen.Routines.route),
-    BottomNavItem("Stats", Icons.Default.BarChart, Screen.Stats.route)
+    BottomNavItem("Calendrier", Icons.Default.CalendarMonth, Screen.Calendar.route),
+    BottomNavItem("Profil", Icons.Default.Person, Screen.Profile.route)
 )
 
 @Composable
@@ -99,6 +109,9 @@ fun DouSportsNavGraph() {
                 ExercisesScreen(
                     onExerciseClick = { exerciseId ->
                         navController.navigate(Screen.ExerciseDetail.createRoute(exerciseId))
+                    },
+                    onCreateExercise = {
+                        navController.navigate(Screen.CreateExercise.createRoute())
                     }
                 )
             }
@@ -109,6 +122,26 @@ fun DouSportsNavGraph() {
             ) { backStack ->
                 val exerciseId = backStack.arguments?.getString("exerciseId") ?: return@composable
                 ExerciseDetailScreen(
+                    exerciseId = exerciseId,
+                    onBack = { navController.popBackStack() },
+                    onEditExercise = { id ->
+                        navController.navigate(Screen.CreateExercise.createRoute(id))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.CreateExercise.route,
+                arguments = listOf(
+                    navArgument("exerciseId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStack ->
+                val exerciseId = backStack.arguments?.getString("exerciseId")
+                CreateExerciseScreen(
                     exerciseId = exerciseId,
                     onBack = { navController.popBackStack() }
                 )
@@ -165,6 +198,14 @@ fun DouSportsNavGraph() {
 
             composable(Screen.Stats.route) {
                 StatsScreen()
+            }
+
+            composable(Screen.Calendar.route) {
+                CalendarScreen()
+            }
+
+            composable(Screen.Profile.route) {
+                ProfileScreen()
             }
         }
     }
