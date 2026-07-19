@@ -105,7 +105,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun CalendarCard(
+internal fun CalendarCard(
     year: Int,
     month: Int,
     sessionsByDay: Map<Int, List<WorkoutSessionEntity>>,
@@ -215,7 +215,7 @@ private fun CalendarCard(
 }
 
 @Composable
-private fun DayCell(
+internal fun DayCell(
     day: Int,
     hasSession: Boolean,
     sessionCount: Int,
@@ -273,7 +273,7 @@ private fun DayCell(
 }
 
 @Composable
-private fun SessionCard(
+internal fun SessionCard(
     session: WorkoutSessionEntity,
     isExpanded: Boolean,
     sets: List<WorkoutSetEntity>,
@@ -358,7 +358,7 @@ private fun SessionCard(
 }
 
 @Composable
-private fun SetsTable(sets: List<WorkoutSetEntity>) {
+internal fun SetsTable(sets: List<WorkoutSetEntity>) {
     val byExercise = sets.groupBy { it.exerciseName }
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         byExercise.forEach { (exerciseName, exerciseSets) ->
@@ -401,14 +401,14 @@ private fun SetsTable(sets: List<WorkoutSetEntity>) {
     }
 }
 
-private fun monthName(month: Int): String = when (month) {
+internal fun monthName(month: Int): String = when (month) {
     1 -> "Janvier"; 2 -> "Février"; 3 -> "Mars"; 4 -> "Avril"
     5 -> "Mai"; 6 -> "Juin"; 7 -> "Juillet"; 8 -> "Août"
     9 -> "Septembre"; 10 -> "Octobre"; 11 -> "Novembre"; 12 -> "Décembre"
     else -> ""
 }
 
-private fun durationLabel(seconds: Long): String {
+internal fun durationLabel(seconds: Long): String {
     val m = seconds / 60
     val s = seconds % 60
     return if (m > 0) "${m}min${if (s > 0) " ${s}s" else ""}" else "${s}s"

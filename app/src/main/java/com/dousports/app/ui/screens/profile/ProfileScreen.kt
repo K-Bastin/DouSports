@@ -25,13 +25,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.dousports.app.data.local.entity.BodyMeasurementEntity
+import com.dousports.app.ui.screens.calendar.CalendarCard
+import com.dousports.app.ui.screens.calendar.CalendarViewModel
+import com.dousports.app.ui.screens.calendar.SessionCard
+import com.dousports.app.ui.screens.calendar.monthName
 import com.dousports.app.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
+fun ProfileScreen(
+    viewModel: ProfileViewModel = hiltViewModel(),
+    calendarViewModel: CalendarViewModel = hiltViewModel()
+) {
     val state by viewModel.uiState.collectAsState()
+    val calState by calendarViewModel.uiState.collectAsState()
 
     if (state.showAddDialog) {
         AddMeasurementDialog(
@@ -75,6 +83,61 @@ fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
 
             if (state.weightHistory.size >= 2) {
                 item { WeightChartCard(state.weightHistory) }
+            }
+
+            item {
+                Text(
+                    "Calendrier d'entraînement",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+            }
+
+            item {
+                CalendarCard(
+                    year = calState.year,
+                    month = calState.month,
+                    sessionsByDay = calState.sessionsByDay,
+                    selectedDay = calState.selectedDay,
+                    onPreviousMonth = calendarViewModel::previousMonth,
+                    onNextMonth = calendarViewModel::nextMonth,
+                    onDayClick = calendarViewModel::selectDay
+                )
+            }
+
+            if (calState.selectedDay != null) {
+                val sessions = calState.sessionsByDay[calState.selectedDay] ?: emptyList()
+                if (sessions.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Séances du ${calState.selectedDay} ${monthName(calState.month)}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                    }
+                    items(sessions) { session ->
+                        SessionCard(
+                            session = session,
+                            isExpanded = calState.selectedSession?.id == session.id,
+                            sets = if (calState.selectedSession?.id == session.id) calState.setsForSession else emptyList(),
+                            isLoadingSets = calState.isLoadingSets,
+                            onClick = { calendarViewModel.selectSession(session) }
+                        )
+                    }
+                } else {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Aucune séance ce jour", color = TextSecondary)
+                        }
+                    }
+                }
             }
 
             if (state.measurements.isNotEmpty()) {
