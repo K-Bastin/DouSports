@@ -62,8 +62,7 @@ val bottomNavItems = listOf(
 fun DouSportsNavGraph() {
     val navController = rememberNavController()
     val currentBackStack by navController.currentBackStackEntryAsState()
-    val currentDestination = currentBackStack?.destination
-    val currentRoute = currentDestination?.route
+    val currentRoute = currentBackStack?.destination?.route
 
     val showBottomBar = currentRoute in bottomNavItems.map { it.route }
 
@@ -72,7 +71,7 @@ fun DouSportsNavGraph() {
             if (showBottomBar) {
                 NavigationBar {
                     bottomNavItems.forEach { item ->
-                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        val selected = currentRoute == item.route
                         NavigationBarItem(
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { Text(item.label) },
