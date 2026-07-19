@@ -46,6 +46,8 @@ class WorkoutRepository @Inject constructor(
     fun getSetsForSession(sessionId: Long): Flow<List<WorkoutSetEntity>> =
         workoutDao.getSetsForSession(sessionId)
 
+    suspend fun getSessionById(id: Long): WorkoutSessionEntity? = workoutDao.getSessionById(id)
+
     suspend fun insertSession(session: WorkoutSessionEntity): Long =
         workoutDao.insertSession(session)
 
