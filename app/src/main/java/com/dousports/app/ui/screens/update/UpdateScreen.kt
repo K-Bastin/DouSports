@@ -24,12 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dousports.app.ui.theme.CardDark
 import com.dousports.app.ui.theme.GreenSuccess
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.ui.theme.RedError
-import com.dousports.app.ui.theme.TextPrimary
-import com.dousports.app.ui.theme.TextSecondary
 import com.dousports.app.ui.viewmodel.DownloadState
 import com.dousports.app.ui.viewmodel.UpdateCheckViewModel
 import com.dousports.app.utils.UpdateInfo
@@ -128,7 +125,7 @@ private fun UpdateInfoCard(info: UpdateInfo) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
@@ -155,7 +152,7 @@ private fun UpdateInfoCard(info: UpdateInfo) {
                 Text(
                     "Nouvelle version disponible",
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     "v${info.latestVersion}",

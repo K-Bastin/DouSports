@@ -24,6 +24,9 @@ class UpdateCheckViewModel @Inject constructor(
     private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
     val updateInfo: StateFlow<UpdateInfo?> = _updateInfo
 
+    private val _showUpdateDialog = MutableStateFlow(false)
+    val showUpdateDialog: StateFlow<Boolean> = _showUpdateDialog
+
     private val _downloadState = MutableStateFlow(DownloadState.IDLE)
     val downloadState: StateFlow<DownloadState> = _downloadState
 
@@ -37,7 +40,9 @@ class UpdateCheckViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _updateInfo.value = updateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+            val info = updateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+            _updateInfo.value = info
+            if (info != null) _showUpdateDialog.value = true
         }
         installer.retryPendingInstall()
     }
@@ -91,8 +96,13 @@ class UpdateCheckViewModel @Inject constructor(
         _needInstallPermission.value = false
     }
 
+    fun dismissDialog() {
+        _showUpdateDialog.value = false
+    }
+
     fun dismiss() {
         _updateInfo.value = null
+        _showUpdateDialog.value = false
         _downloadState.value = DownloadState.IDLE
         _downloadProgress.value = 0f
     }

@@ -73,19 +73,21 @@ fun DouSportsNavGraph() {
 
     val updateVm: UpdateCheckViewModel = hiltViewModel()
     val updateInfo by updateVm.updateInfo.collectAsState()
+    val showUpdateDialog by updateVm.showUpdateDialog.collectAsState()
 
-    updateInfo?.let { info ->
+    if (showUpdateDialog && updateInfo != null) {
         AlertDialog(
-            onDismissRequest = { updateVm.dismiss() },
+            onDismissRequest = { updateVm.dismissDialog() },
             title = { Text("Mise à jour disponible") },
-            text = { Text("La version ${info.latestVersion} est disponible.") },
+            text = { Text("La version ${updateInfo!!.latestVersion} est disponible.") },
             confirmButton = {
                 TextButton(onClick = {
+                    updateVm.dismissDialog()
                     navController.navigate(Screen.Update.route) { launchSingleTop = true }
                 }) { Text("Voir la mise à jour") }
             },
             dismissButton = {
-                TextButton(onClick = { updateVm.dismiss() }) { Text("Plus tard") }
+                TextButton(onClick = { updateVm.dismissDialog() }) { Text("Plus tard") }
             }
         )
     }
