@@ -467,6 +467,6 @@ private fun AddMeasurementDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Annuler") }
         },
-        containerColor = CardDark
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }
