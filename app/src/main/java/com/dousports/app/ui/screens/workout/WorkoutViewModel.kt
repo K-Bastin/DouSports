@@ -22,7 +22,8 @@ data class LoggedSet(
 data class ExerciseWorkoutState(
     val routineExercise: RoutineExerciseEntity,
     val loggedSets: List<LoggedSet> = emptyList(),
-    val previousSets: List<WorkoutSetEntity> = emptyList()
+    val previousSets: List<WorkoutSetEntity> = emptyList(),
+    val personalRecord: Float? = null
 )
 
 data class ActiveWorkoutUiState(
@@ -34,7 +35,8 @@ data class ActiveWorkoutUiState(
     val sessionId: Long? = null,
     val sessionStartedAt: Long = 0L,
     val isLoading: Boolean = true,
-    val isFinished: Boolean = false
+    val isFinished: Boolean = false,
+    val prBeatenExerciseName: String? = null
 )
 
 @HiltViewModel
@@ -63,7 +65,8 @@ class WorkoutViewModel @Inject constructor(
 
             val exerciseStates = routineExercises.map { re ->
                 val prev = repository.getRecentSetsForExercise(re.exerciseId, 10)
-                ExerciseWorkoutState(routineExercise = re, previousSets = prev)
+                val pr = repository.maxWeightForExercise(re.exerciseId)
+                ExerciseWorkoutState(routineExercise = re, previousSets = prev, personalRecord = pr)
             }
 
             _uiState.update {
@@ -98,11 +101,16 @@ class WorkoutViewModel @Inject constructor(
         val current = _uiState.value.exercises[exerciseIndex]
         val setNumber = current.loggedSets.size + 1
         val newSet = LoggedSet(setNumber, reps, weight)
+        val prBeaten = weight > 0f && (current.personalRecord == null || weight > current.personalRecord)
 
         _uiState.update {
             val updated = it.exercises.toMutableList()
-            updated[exerciseIndex] = current.copy(loggedSets = current.loggedSets + newSet)
-            it.copy(exercises = updated)
+            val newPr = if (prBeaten) weight else current.personalRecord
+            updated[exerciseIndex] = current.copy(loggedSets = current.loggedSets + newSet, personalRecord = newPr)
+            it.copy(
+                exercises = updated,
+                prBeatenExerciseName = if (prBeaten) current.routineExercise.exerciseName else it.prBeatenExerciseName
+            )
         }
 
         // Persist to database
@@ -120,6 +128,10 @@ class WorkoutViewModel @Inject constructor(
                 )
             )
         }
+    }
+
+    fun clearPrBeaten() {
+        _uiState.update { it.copy(prBeatenExerciseName = null) }
     }
 
     fun removeLastSet(exerciseIndex: Int) {
