@@ -32,6 +32,9 @@ import com.dousports.app.utils.gifUrl
 import java.io.File
 import com.dousports.app.utils.secondaryMusclesList
 import com.dousports.app.utils.stepsAsList
+import com.dousports.app.utils.toFrBodyPart
+import com.dousports.app.utils.toFrEquipment
+import com.dousports.app.utils.toFrMuscle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -224,9 +227,9 @@ fun ExerciseDetailScreen(
                 item {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            InfoChip(label = ex.bodyPart, primary = true)
-                            if (ex.equipment.isNotBlank()) InfoChip(label = ex.equipment)
-                            if (ex.muscleGroup.isNotBlank()) InfoChip(label = ex.muscleGroup)
+                            InfoChip(label = ex.bodyPart.toFrBodyPart(), primary = true)
+                            if (ex.equipment.isNotBlank()) InfoChip(label = ex.equipment.toFrEquipment())
+                            if (ex.muscleGroup.isNotBlank()) InfoChip(label = ex.muscleGroup.toFrMuscle())
                             if (ex.isCustom) InfoChip(label = "Perso")
                         }
 
@@ -242,7 +245,7 @@ fun ExerciseDetailScreen(
                             Spacer(Modifier.height(6.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 secondary.take(4).forEach { muscle ->
-                                    InfoChip(label = muscle)
+                                    InfoChip(label = muscle.toFrMuscle())
                                 }
                             }
                             Spacer(Modifier.height(16.dp))
@@ -310,7 +313,7 @@ private fun InfoChip(label: String, primary: Boolean = false) {
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(
-            label.replaceFirstChar { it.uppercase() },
+            label,
             style = MaterialTheme.typography.bodySmall,
             color = if (primary) OrangeEnergy else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal
