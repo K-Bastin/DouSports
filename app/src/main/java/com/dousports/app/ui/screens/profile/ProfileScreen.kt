@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +33,7 @@ import com.dousports.app.ui.screens.calendar.CalendarViewModel
 import com.dousports.app.ui.screens.calendar.SessionCard
 import com.dousports.app.ui.screens.calendar.monthName
 import com.dousports.app.ui.theme.*
+import com.dousports.app.ui.viewmodel.ThemeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,10 +41,12 @@ import java.util.*
 fun ProfileScreen(
     onNavigateToStats: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
-    calendarViewModel: CalendarViewModel = hiltViewModel()
+    calendarViewModel: CalendarViewModel = hiltViewModel(),
+    themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val calState by calendarViewModel.uiState.collectAsState()
+    val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
 
     if (state.showAddDialog) {
         AddMeasurementDialog(
@@ -84,14 +89,23 @@ fun ProfileScreen(
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
-                    OutlinedButton(
-                        onClick = onNavigateToStats,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy)
-                    ) {
-                        Icon(Icons.Default.BarChart, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Stats")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(onClick = { themeViewModel.toggleTheme() }) {
+                            Icon(
+                                if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = if (isDarkTheme) "Mode clair" else "Mode sombre",
+                                tint = OrangeEnergy
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = onNavigateToStats,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy)
+                        ) {
+                            Icon(Icons.Default.BarChart, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Stats")
+                        }
                     }
                 }
             }
