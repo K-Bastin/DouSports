@@ -33,7 +33,10 @@ import com.dousports.app.ui.screens.calendar.CalendarCard
 import com.dousports.app.ui.screens.calendar.CalendarViewModel
 import com.dousports.app.ui.screens.calendar.SessionCard
 import com.dousports.app.ui.screens.calendar.monthName
-import com.dousports.app.ui.theme.*
+import com.dousports.app.ui.theme.GreenSuccess
+import com.dousports.app.ui.theme.OrangeEnergy
+import com.dousports.app.ui.theme.RedError
+import com.dousports.app.ui.theme.YellowWarning
 import com.dousports.app.ui.viewmodel.ThemeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -222,7 +225,7 @@ private fun CurrentStatsCard(state: ProfileUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         if (m == null) {
             Box(
@@ -231,7 +234,7 @@ private fun CurrentStatsCard(state: ProfileUiState) {
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Aucune donnée", color = TextSecondary)
+                Text("Aucune donnée", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Card
         }
@@ -258,7 +261,7 @@ private fun VerticalDivider() {
         modifier = Modifier
             .width(1.dp)
             .height(56.dp)
-            .background(Color(0xFF30363D))
+            .background(MaterialTheme.colorScheme.outline)
     )
 }
 
@@ -267,7 +270,7 @@ private fun StatColumn(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = color)
         Spacer(Modifier.height(4.dp))
-        Text(label, fontSize = 12.sp, color = TextSecondary)
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -281,10 +284,12 @@ private fun bmiColor(bmi: Float) = when {
 @Composable
 private fun WeightChartCard(history: List<Pair<Long, Float>>) {
     val dateFmt = remember { SimpleDateFormat("d MMM", Locale.FRENCH) }
+    val gridColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+    val dotInnerColor = MaterialTheme.colorScheme.surfaceVariant
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -296,12 +301,12 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                     "Évolution du poids",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     "${history.size} mesures",
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -330,7 +335,7 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                 for (i in 0..gridCount) {
                     val y = h * i / gridCount
                     drawLine(
-                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.06f),
+                        color = gridColor,
                         start = Offset(0f, y),
                         end = Offset(w, y),
                         strokeWidth = 1.dp.toPx()
@@ -360,7 +365,7 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
 
                 pts.forEach { pt ->
                     drawCircle(color = OrangeEnergy, radius = 5.dp.toPx(), center = pt)
-                    drawCircle(color = NavyDark, radius = 3.dp.toPx(), center = pt)
+                    drawCircle(color = dotInnerColor, radius = 3.dp.toPx(), center = pt)
                 }
             }
 
@@ -372,17 +377,17 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                 Text(
                     dateFmt.format(Date(timestamps.first())),
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     "min %.1f  max %.1f kg".format(minW, maxW),
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     dateFmt.format(Date(timestamps.last())),
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -395,7 +400,7 @@ private fun MeasurementRow(m: BodyMeasurementEntity, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
@@ -407,14 +412,14 @@ private fun MeasurementRow(m: BodyMeasurementEntity, onDelete: () -> Unit) {
                 Text(
                     fmt.format(Date(m.recordedAt)),
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "%.1f kg  •  %.0f cm".format(m.weightKg, m.heightCm),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
             IconButton(onClick = onDelete) {
