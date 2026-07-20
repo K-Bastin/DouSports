@@ -71,6 +71,7 @@ fun DouSportsNavGraph() {
 
     val updateVm: UpdateCheckViewModel = hiltViewModel()
     val updateInfo by updateVm.updateInfo.collectAsState()
+    val needInstallPermission by updateVm.needInstallPermission.collectAsState()
 
     updateInfo?.let { info ->
         AlertDialog(
@@ -82,6 +83,20 @@ fun DouSportsNavGraph() {
             },
             dismissButton = {
                 TextButton(onClick = { updateVm.dismiss() }) { Text("Plus tard") }
+            }
+        )
+    }
+
+    if (needInstallPermission) {
+        AlertDialog(
+            onDismissRequest = { updateVm.dismissPermission() },
+            title = { Text("Permission requise") },
+            text = { Text("Autorisez l'installation depuis des sources inconnues pour installer la mise à jour.") },
+            confirmButton = {
+                TextButton(onClick = { updateVm.openInstallPermissionSettings() }) { Text("Autoriser") }
+            },
+            dismissButton = {
+                TextButton(onClick = { updateVm.dismissPermission() }) { Text("Annuler") }
             }
         )
     }

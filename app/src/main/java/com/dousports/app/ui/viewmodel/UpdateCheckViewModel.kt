@@ -21,16 +21,35 @@ class UpdateCheckViewModel @Inject constructor(
     private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
     val updateInfo: StateFlow<UpdateInfo?> = _updateInfo
 
+    private val _needInstallPermission = MutableStateFlow(false)
+    val needInstallPermission: StateFlow<Boolean> = _needInstallPermission
+
     init {
         viewModelScope.launch {
             _updateInfo.value = updateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
         }
+        // Retry any install that was waiting for the permission
+        installer.retryPendingInstall()
     }
 
     fun download() {
         val info = _updateInfo.value ?: return
+        if (!installer.canInstallPackages()) {
+            _needInstallPermission.value = true
+            dismiss()
+            return
+        }
         installer.download(info.downloadUrl, info.latestVersion)
         dismiss()
+    }
+
+    fun openInstallPermissionSettings() {
+        installer.openInstallPermissionSettings()
+        _needInstallPermission.value = false
+    }
+
+    fun dismissPermission() {
+        _needInstallPermission.value = false
     }
 
     fun dismiss() {
