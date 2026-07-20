@@ -224,6 +224,8 @@ fun CreateRoutineScreen(
     val lazyListState = rememberLazyListState()
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableStateOf(0f) }
+    // Tracks current drag position without stale-closure risk
+    val currentDragIndex = remember { androidx.compose.runtime.mutableIntStateOf(-1) }
 
     Scaffold(
         topBar = {
@@ -332,31 +334,38 @@ fun CreateRoutineScreen(
                     onWeightChange = { viewModel.updateExercise(exercise.tempId, weight = it) },
                     onDragStart = {
                         draggedIndex = index
+                        currentDragIndex.intValue = index
                         dragOffset = 0f
                     },
                     onDrag = { delta ->
                         dragOffset += delta
-                        // Determine target index from drag position
-                        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
-                        val draggingItem = visibleItems.firstOrNull { it.key == exercise.tempId }
-                        if (draggingItem != null) {
-                            val centerY = draggingItem.offset + draggingItem.size / 2 + dragOffset
-                            val targetItem = visibleItems.firstOrNull { item ->
-                                item.key != exercise.tempId &&
-                                centerY >= item.offset && centerY <= item.offset + item.size
-                            }
-                            if (targetItem != null) {
-                                val targetIdx = state.exercises.indexOfFirst { it.tempId == targetItem.key }
-                                if (targetIdx >= 0 && targetIdx != index) {
-                                    viewModel.moveExercise(index, targetIdx)
-                                    draggedIndex = targetIdx
-                                    dragOffset = 0f
+                        val fromIdx = currentDragIndex.intValue
+                        val draggingTempId = if (fromIdx >= 0) state.exercises.getOrNull(fromIdx)?.tempId else null
+                        if (fromIdx >= 0 && draggingTempId != null) {
+                            val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                            val draggingItem = visibleItems.firstOrNull { it.key == draggingTempId }
+                            if (draggingItem != null) {
+                                val centerY = draggingItem.offset + draggingItem.size / 2 + dragOffset
+                                val targetItem = visibleItems.firstOrNull { item ->
+                                    item.key != draggingTempId &&
+                                    centerY >= item.offset && centerY <= item.offset + item.size &&
+                                    state.exercises.any { it.tempId == item.key }
+                                }
+                                if (targetItem != null) {
+                                    val targetIdx = state.exercises.indexOfFirst { it.tempId == targetItem.key }
+                                    if (targetIdx >= 0 && targetIdx != fromIdx) {
+                                        viewModel.moveExercise(fromIdx, targetIdx)
+                                        draggedIndex = targetIdx
+                                        currentDragIndex.intValue = targetIdx
+                                        dragOffset = 0f
+                                    }
                                 }
                             }
                         }
                     },
                     onDragEnd = {
                         draggedIndex = null
+                        currentDragIndex.intValue = -1
                         dragOffset = 0f
                     }
                 )
@@ -410,6 +419,10 @@ private fun RoutineExerciseCard(
     onDrag: (Float) -> Unit = {},
     onDragEnd: () -> Unit = {}
 ) {
+    val latestOnDragStart by rememberUpdatedState(onDragStart)
+    val latestOnDrag by rememberUpdatedState(onDrag)
+    val latestOnDragEnd by rememberUpdatedState(onDragEnd)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -438,12 +451,12 @@ private fun RoutineExerciseCard(
                         .size(24.dp)
                         .pointerInput(item.tempId) {
                             detectDragGesturesAfterLongPress(
-                                onDragStart = { onDragStart() },
-                                onDragEnd = { onDragEnd() },
-                                onDragCancel = { onDragEnd() },
+                                onDragStart = { latestOnDragStart() },
+                                onDragEnd = { latestOnDragEnd() },
+                                onDragCancel = { latestOnDragEnd() },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
-                                    onDrag(dragAmount.y)
+                                    latestOnDrag(dragAmount.y)
                                 }
                             )
                         }
