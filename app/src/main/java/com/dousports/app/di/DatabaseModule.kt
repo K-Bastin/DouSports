@@ -6,6 +6,7 @@ import com.dousports.app.data.local.AppDatabase
 import com.dousports.app.data.local.dao.ExerciseDao
 import com.dousports.app.data.local.dao.ProfileDao
 import com.dousports.app.data.local.dao.RoutineDao
+import com.dousports.app.data.local.dao.WeeklyScheduleDao
 import com.dousports.app.data.local.dao.WorkoutDao
 import dagger.Module
 import dagger.Provides
@@ -22,7 +23,12 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.DATABASE_NAME)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2,
+                AppDatabase.MIGRATION_2_3,
+                AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5
+            )
             .build()
 
     @Provides
@@ -36,4 +42,7 @@ object DatabaseModule {
 
     @Provides
     fun provideProfileDao(db: AppDatabase): ProfileDao = db.profileDao()
+
+    @Provides
+    fun provideWeeklyScheduleDao(db: AppDatabase): WeeklyScheduleDao = db.weeklyScheduleDao()
 }

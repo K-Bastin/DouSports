@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.dousports.app.data.local.dao.ExerciseDao
 import com.dousports.app.data.local.dao.ProfileDao
 import com.dousports.app.data.local.dao.RoutineDao
+import com.dousports.app.data.local.dao.WeeklyScheduleDao
 import com.dousports.app.data.local.dao.WorkoutDao
 import com.dousports.app.data.local.entity.*
 
@@ -17,9 +18,10 @@ import com.dousports.app.data.local.entity.*
         RoutineExerciseEntity::class,
         WorkoutSessionEntity::class,
         WorkoutSetEntity::class,
-        BodyMeasurementEntity::class
+        BodyMeasurementEntity::class,
+        WeeklyScheduleEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun routineDao(): RoutineDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun profileDao(): ProfileDao
+    abstract fun weeklyScheduleDao(): WeeklyScheduleDao
 
     companion object {
         const val DATABASE_NAME = "dousports.db"
@@ -54,6 +57,17 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("DELETE FROM exercises WHERE isCustom = 0")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `weekly_schedule` " +
+                    "(`dayOfWeek` INTEGER NOT NULL PRIMARY KEY, " +
+                    "`routineId` INTEGER NOT NULL, " +
+                    "`routineName` TEXT NOT NULL)"
+                )
             }
         }
     }

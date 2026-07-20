@@ -19,6 +19,7 @@ import com.dousports.app.ui.screens.profile.ProfileScreen
 import com.dousports.app.ui.screens.exercises.CreateExerciseScreen
 import com.dousports.app.ui.screens.routines.CreateRoutineScreen
 import com.dousports.app.ui.screens.routines.RoutinesScreen
+import com.dousports.app.ui.screens.schedule.WeeklyScheduleScreen
 import com.dousports.app.ui.screens.stats.StatsScreen
 import com.dousports.app.ui.screens.workout.ActiveWorkoutScreen
 import com.dousports.app.ui.viewmodel.UpdateCheckViewModel
@@ -44,6 +45,7 @@ sealed class Screen(val route: String) {
     object Stats : Screen("stats")
     object Profile : Screen("profile")
     object WorkoutHistory : Screen("workout-history")
+    object WeeklySchedule : Screen("weekly-schedule")
 }
 
 data class BottomNavItem(
@@ -183,6 +185,18 @@ fun DouSportsNavGraph() {
                     onEditRoutine = { routineId ->
                         navController.navigate(Screen.CreateRoutine.createRoute(routineId))
                     },
+                    onStartRoutine = { routineId ->
+                        navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
+                    },
+                    onNavigateToSchedule = {
+                        navController.navigate(Screen.WeeklySchedule.route)
+                    }
+                )
+            }
+
+            composable(Screen.WeeklySchedule.route) {
+                WeeklyScheduleScreen(
+                    onBack = { navController.popBackStack() },
                     onStartRoutine = { routineId ->
                         navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
                     }
