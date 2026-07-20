@@ -34,4 +34,8 @@ class RoutinesViewModel @Inject constructor(
     fun deleteRoutine(routine: RoutineEntity) {
         viewModelScope.launch { repository.deleteRoutine(routine) }
     }
+
+    fun duplicateRoutine(routineId: Long) {
+        viewModelScope.launch { repository.duplicateRoutine(routineId) }
+    }
 }

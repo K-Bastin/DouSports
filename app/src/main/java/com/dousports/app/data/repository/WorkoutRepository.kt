@@ -34,6 +34,20 @@ class WorkoutRepository @Inject constructor(
         routineDao.insertRoutineExercises(items)
     }
 
+    suspend fun duplicateRoutine(routineId: Long) {
+        val original = routineDao.getRoutineById(routineId) ?: return
+        val newRoutine = original.copy(
+            id = 0,
+            name = "${original.name} (copie)",
+            createdAt = System.currentTimeMillis(),
+            lastPerformedAt = null
+        )
+        val newRoutineId = routineDao.insertRoutine(newRoutine)
+        val exercises = routineDao.getExercisesForRoutineSync(routineId)
+        val newExercises = exercises.map { it.copy(id = 0, routineId = newRoutineId) }
+        routineDao.insertRoutineExercises(newExercises)
+    }
+
     suspend fun deleteRoutineExercise(re: RoutineExerciseEntity) =
         routineDao.deleteRoutineExercise(re)
 

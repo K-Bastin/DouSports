@@ -69,7 +69,8 @@ fun RoutinesScreen(
                             routine = routine,
                             onStart = { onStartRoutine(routine.id) },
                             onEdit = { onEditRoutine(routine.id) },
-                            onDelete = { deleteTarget = routine }
+                            onDelete = { deleteTarget = routine },
+                            onDuplicate = { viewModel.duplicateRoutine(routine.id) }
                         )
                     }
                     item { Spacer(Modifier.height(72.dp)) }
@@ -103,7 +104,8 @@ private fun RoutineListCard(
     routine: RoutineEntity,
     onStart: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onDuplicate: () -> Unit = {}
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -164,6 +166,11 @@ private fun RoutineListCard(
                         text = { Text("Modifier") },
                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                         onClick = { menuExpanded = false; onEdit() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Dupliquer") },
+                        leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
+                        onClick = { menuExpanded = false; onDuplicate() }
                     )
                     DropdownMenuItem(
                         text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
