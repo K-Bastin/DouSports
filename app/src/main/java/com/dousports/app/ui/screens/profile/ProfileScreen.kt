@@ -267,21 +267,34 @@ private fun bmiColor(bmi: Float) = when {
 
 @Composable
 private fun WeightChartCard(history: List<Pair<Long, Float>>) {
+    val dateFmt = remember { SimpleDateFormat("d MMM", Locale.FRENCH) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "Évolution du poids",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Évolution du poids",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                Text(
+                    "${history.size} mesures",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+            }
             Spacer(Modifier.height(12.dp))
 
             val weights = history.map { it.second }
+            val timestamps = history.map { it.first }
             val minW = weights.min()
             val maxW = weights.max()
             val range = (maxW - minW).coerceAtLeast(1f)
@@ -297,6 +310,18 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                     val x = if (weights.size > 1) i * w / (weights.size - 1) else w / 2f
                     val y = h - ((wt - minW) / range) * h * 0.85f - h * 0.05f
                     Offset(x, y)
+                }
+
+                // Horizontal grid lines
+                val gridCount = 3
+                for (i in 0..gridCount) {
+                    val y = h * i / gridCount
+                    drawLine(
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.06f),
+                        start = Offset(0f, y),
+                        end = Offset(w, y),
+                        strokeWidth = 1.dp.toPx()
+                    )
                 }
 
                 // Fill under curve
@@ -326,12 +351,26 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                 }
             }
 
+            Spacer(Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("%.1f kg".format(minW), fontSize = 11.sp, color = TextSecondary)
-                Text("%.1f kg".format(maxW), fontSize = 11.sp, color = TextSecondary)
+                Text(
+                    dateFmt.format(Date(timestamps.first())),
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+                Text(
+                    "min %.1f  max %.1f kg".format(minW, maxW),
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+                Text(
+                    dateFmt.format(Date(timestamps.last())),
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
             }
         }
     }
