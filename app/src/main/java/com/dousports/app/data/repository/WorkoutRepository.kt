@@ -78,4 +78,6 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getSetsForSessionSync(sessionId: Long): List<WorkoutSetEntity> =
         workoutDao.getSetsForSessionSync(sessionId)
+
+    suspend fun getAllSets(): List<WorkoutSetEntity> = workoutDao.getAllSets()
 }

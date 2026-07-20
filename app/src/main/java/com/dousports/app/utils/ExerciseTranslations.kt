@@ -1,0 +1,115 @@
+package com.dousports.app.utils
+
+private val FR_BODY_PARTS = mapOf(
+    "back" to "Dos",
+    "cardio" to "Cardio",
+    "chest" to "Pectoraux",
+    "lower arms" to "Avant-bras inf.",
+    "lower legs" to "Jambes inf.",
+    "neck" to "Nuque",
+    "shoulders" to "Épaules",
+    "upper arms" to "Bras sup.",
+    "upper legs" to "Cuisses",
+    "waist" to "Abdominaux"
+)
+
+private val FR_EQUIPMENT = mapOf(
+    "assisted" to "Assisté",
+    "band" to "Élastique",
+    "barbell" to "Barre",
+    "body weight" to "Poids du corps",
+    "bosu ball" to "Bosu",
+    "cable" to "Câble",
+    "dumbbell" to "Haltère",
+    "elliptical machine" to "Elliptique",
+    "ez barbell" to "Barre EZ",
+    "hammer" to "Marteau",
+    "kettlebell" to "Kettlebell",
+    "leverage machine" to "Machine à levier",
+    "medicine ball" to "Ballon lest.",
+    "olympic barbell" to "Barre olympique",
+    "resistance band" to "Bande élastique",
+    "roller" to "Rouleau",
+    "rope" to "Corde",
+    "skierg machine" to "Skierg",
+    "sled machine" to "Traîneau",
+    "smith machine" to "Machine Smith",
+    "stability ball" to "Ballon swiss",
+    "stationary bike" to "Vélo statique",
+    "stepmill machine" to "Stepmill",
+    "tire" to "Pneu",
+    "trap bar" to "Barre trap",
+    "upper body ergometer" to "Ergomètre membres sup.",
+    "weighted" to "Lesté",
+    "wheel roller" to "Roue abdominale"
+)
+
+private val FR_TARGETS = mapOf(
+    "abductors" to "Abducteurs",
+    "abs" to "Abdominaux",
+    "adductors" to "Adducteurs",
+    "biceps" to "Biceps",
+    "calves" to "Mollets",
+    "cardiovascular system" to "Système cardiovasculaire",
+    "delts" to "Deltoïdes",
+    "forearms" to "Avant-bras",
+    "glutes" to "Fessiers",
+    "hamstrings" to "Ischio-jambiers",
+    "lats" to "Dorsaux",
+    "levator scapulae" to "Élévateur de la scapula",
+    "pectorals" to "Pectoraux",
+    "quads" to "Quadriceps",
+    "serratus anterior" to "Dentelé antérieur",
+    "spine" to "Colonne vertébrale",
+    "traps" to "Trapèzes",
+    "triceps" to "Triceps",
+    "upper back" to "Haut du dos"
+)
+
+private val FR_MUSCLES = mapOf(
+    "abdominals" to "Abdominaux",
+    "ankle stabilizers" to "Stabilisateurs cheville",
+    "ankles" to "Chevilles",
+    "back" to "Dos",
+    "biceps" to "Biceps",
+    "brachialis" to "Brachial",
+    "calves" to "Mollets",
+    "chest" to "Pectoraux",
+    "core" to "Sangle abdominale",
+    "deltoids" to "Deltoïdes",
+    "feet" to "Pieds",
+    "forearms" to "Avant-bras",
+    "glutes" to "Fessiers",
+    "grip muscles" to "Muscles de préhension",
+    "groin" to "Aine",
+    "hamstrings" to "Ischio-jambiers",
+    "hands" to "Mains",
+    "hip flexors" to "Fléchisseurs de la hanche",
+    "inner thighs" to "Face interne des cuisses",
+    "latissimus dorsi" to "Grand dorsal",
+    "lats" to "Dorsaux",
+    "lower abs" to "Bas des abdos",
+    "lower back" to "Bas du dos",
+    "obliques" to "Obliques",
+    "quadriceps" to "Quadriceps",
+    "rear deltoids" to "Deltoïdes postérieurs",
+    "rhomboids" to "Rhomboïdes",
+    "rotator cuff" to "Coiffe des rotateurs",
+    "shins" to "Tibias",
+    "shoulders" to "Épaules",
+    "soleus" to "Soléaire",
+    "sternocleidomastoid" to "Sterno-cléido-mastoïdien",
+    "trapezius" to "Trapèze",
+    "traps" to "Trapèzes",
+    "triceps" to "Triceps",
+    "upper back" to "Haut du dos",
+    "upper chest" to "Haut des pectoraux",
+    "wrist extensors" to "Extenseurs du poignet",
+    "wrist flexors" to "Fléchisseurs du poignet",
+    "wrists" to "Poignets"
+)
+
+fun String.toFrBodyPart(): String = FR_BODY_PARTS[this.lowercase()] ?: this.replaceFirstChar { it.uppercase() }
+fun String.toFrEquipment(): String = FR_EQUIPMENT[this.lowercase()] ?: this.replaceFirstChar { it.uppercase() }
+fun String.toFrTarget(): String = FR_TARGETS[this.lowercase()] ?: this.replaceFirstChar { it.uppercase() }
+fun String.toFrMuscle(): String = FR_MUSCLES[this.lowercase()] ?: this.replaceFirstChar { it.uppercase() }

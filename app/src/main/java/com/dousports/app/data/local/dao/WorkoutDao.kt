@@ -61,4 +61,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workout_sets WHERE sessionId = :sessionId ORDER BY exerciseId, setNumber ASC")
     suspend fun getSetsForSessionSync(sessionId: Long): List<WorkoutSetEntity>
+
+    @Query("SELECT * FROM workout_sets")
+    suspend fun getAllSets(): List<WorkoutSetEntity>
 }

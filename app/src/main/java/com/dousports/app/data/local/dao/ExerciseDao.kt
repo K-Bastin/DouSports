@@ -61,4 +61,7 @@ interface ExerciseDao {
 
     @Query("SELECT COUNT(*) FROM exercises")
     suspend fun count(): Int
+
+    @Query("SELECT * FROM exercises WHERE id IN (:ids)")
+    suspend fun getExercisesByIds(ids: List<String>): List<ExerciseEntity>
 }

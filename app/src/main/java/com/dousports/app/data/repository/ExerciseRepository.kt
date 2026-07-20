@@ -40,4 +40,7 @@ class ExerciseRepository @Inject constructor(
     suspend fun getAllTargets(): List<String> = exerciseDao.getAllTargets()
 
     suspend fun getAllMuscleGroups(): List<String> = exerciseDao.getAllMuscleGroups()
+
+    suspend fun getExercisesByIds(ids: List<String>): List<ExerciseEntity> =
+        exerciseDao.getExercisesByIds(ids)
 }

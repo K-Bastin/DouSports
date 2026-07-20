@@ -29,6 +29,7 @@ import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.imageUrl
+import com.dousports.app.utils.toFrBodyPart
 import java.io.File
 
 @Composable
@@ -98,7 +99,7 @@ fun ExercisesScreen(
                     FilterChip(
                         selected = uiState.selectedBodyPart == part,
                         onClick = { viewModel.onBodyPartSelected(if (uiState.selectedBodyPart == part) null else part) },
-                        label = { Text(part.replaceFirstChar { it.uppercase() }) },
+                        label = { Text(part.toFrBodyPart()) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OrangeEnergy,
                             selectedLabelColor = androidx.compose.ui.graphics.Color.White
@@ -224,7 +225,7 @@ private fun ExerciseCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    MiniChip(exercise.bodyPart)
+                    MiniChip(exercise.bodyPart.toFrBodyPart())
                     if (exercise.isCustom) MiniChip("Perso")
                 }
             }
@@ -241,7 +242,7 @@ private fun MiniChip(text: String) {
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
-            text.replaceFirstChar { it.uppercase() },
+            text,
             style = MaterialTheme.typography.bodySmall,
             color = OrangeEnergy
         )
