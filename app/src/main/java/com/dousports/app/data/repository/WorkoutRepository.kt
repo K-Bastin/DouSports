@@ -96,6 +96,8 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getAllSets(): List<WorkoutSetEntity> = workoutDao.getAllSets()
 
+    suspend fun getAllSetsSince(since: Long): List<WorkoutSetEntity> = workoutDao.getAllSetsSince(since)
+
     suspend fun getProgressionForExercise(exerciseId: String, limit: Int = 20): List<ExerciseProgressPoint> =
         workoutDao.getProgressionForExercise(exerciseId, limit)
 }
