@@ -21,6 +21,7 @@ import com.dousports.app.ui.screens.routines.CreateRoutineScreen
 import com.dousports.app.ui.screens.routines.RoutinesScreen
 import com.dousports.app.ui.screens.schedule.WeeklyScheduleScreen
 import com.dousports.app.ui.screens.stats.StatsScreen
+import com.dousports.app.ui.screens.update.UpdateScreen
 import com.dousports.app.ui.screens.workout.ActiveWorkoutScreen
 import com.dousports.app.ui.viewmodel.UpdateCheckViewModel
 
@@ -46,6 +47,7 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object WorkoutHistory : Screen("workout-history")
     object WeeklySchedule : Screen("weekly-schedule")
+    object Update : Screen("update")
 }
 
 data class BottomNavItem(
@@ -71,32 +73,19 @@ fun DouSportsNavGraph() {
 
     val updateVm: UpdateCheckViewModel = hiltViewModel()
     val updateInfo by updateVm.updateInfo.collectAsState()
-    val needInstallPermission by updateVm.needInstallPermission.collectAsState()
 
     updateInfo?.let { info ->
         AlertDialog(
             onDismissRequest = { updateVm.dismiss() },
             title = { Text("Mise à jour disponible") },
-            text = { Text("La version ${info.latestVersion} est disponible. Voulez-vous la télécharger ?") },
+            text = { Text("La version ${info.latestVersion} est disponible.") },
             confirmButton = {
-                TextButton(onClick = { updateVm.download() }) { Text("Télécharger") }
+                TextButton(onClick = {
+                    navController.navigate(Screen.Update.route) { launchSingleTop = true }
+                }) { Text("Voir la mise à jour") }
             },
             dismissButton = {
                 TextButton(onClick = { updateVm.dismiss() }) { Text("Plus tard") }
-            }
-        )
-    }
-
-    if (needInstallPermission) {
-        AlertDialog(
-            onDismissRequest = { updateVm.dismissPermission() },
-            title = { Text("Permission requise") },
-            text = { Text("Autorisez l'installation depuis des sources inconnues pour installer la mise à jour.") },
-            confirmButton = {
-                TextButton(onClick = { updateVm.openInstallPermissionSettings() }) { Text("Autoriser") }
-            },
-            dismissButton = {
-                TextButton(onClick = { updateVm.dismissPermission() }) { Text("Annuler") }
             }
         )
     }
@@ -266,6 +255,13 @@ fun DouSportsNavGraph() {
 
             composable(Screen.WorkoutHistory.route) {
                 WorkoutHistoryScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(Screen.Update.route) {
+                UpdateScreen(
+                    viewModel = updateVm,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
