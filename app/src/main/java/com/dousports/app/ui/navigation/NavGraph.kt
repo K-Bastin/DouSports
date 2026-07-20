@@ -1,5 +1,7 @@
 package com.dousports.app.ui.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -7,10 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
-import com.dousports.app.ui.screens.calendar.CalendarScreen
 import com.dousports.app.ui.screens.exercises.ExerciseDetailScreen
 import com.dousports.app.ui.screens.exercises.ExercisesScreen
 import com.dousports.app.ui.screens.home.HomeScreen
@@ -20,6 +23,7 @@ import com.dousports.app.ui.screens.routines.CreateRoutineScreen
 import com.dousports.app.ui.screens.routines.RoutinesScreen
 import com.dousports.app.ui.screens.stats.StatsScreen
 import com.dousports.app.ui.screens.workout.ActiveWorkoutScreen
+import com.dousports.app.ui.viewmodel.UpdateCheckViewModel
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -40,7 +44,6 @@ sealed class Screen(val route: String) {
             if (exerciseId != null) "create-exercise?exerciseId=$exerciseId" else "create-exercise"
     }
     object Stats : Screen("stats")
-    object Calendar : Screen("calendar")
     object Profile : Screen("profile")
 }
 
@@ -54,7 +57,6 @@ val bottomNavItems = listOf(
     BottomNavItem("Accueil", Icons.Default.Home, Screen.Home.route),
     BottomNavItem("Exercices", Icons.Default.FitnessCenter, Screen.Exercises.route),
     BottomNavItem("Routines", Icons.Default.ListAlt, Screen.Routines.route),
-    BottomNavItem("Calendrier", Icons.Default.CalendarMonth, Screen.Calendar.route),
     BottomNavItem("Profil", Icons.Default.Person, Screen.Profile.route)
 )
 
@@ -65,6 +67,27 @@ fun DouSportsNavGraph() {
     val currentRoute = currentBackStack?.destination?.route
 
     val showBottomBar = currentRoute in bottomNavItems.map { it.route }
+
+    val updateVm: UpdateCheckViewModel = hiltViewModel()
+    val updateInfo by updateVm.updateInfo.collectAsState()
+    val context = LocalContext.current
+
+    updateInfo?.let { info ->
+        AlertDialog(
+            onDismissRequest = { updateVm.dismiss() },
+            title = { Text("Mise à jour disponible") },
+            text = { Text("La version ${info.latestVersion} est disponible. Voulez-vous la télécharger ?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl)))
+                    updateVm.dismiss()
+                }) { Text("Télécharger") }
+            },
+            dismissButton = {
+                TextButton(onClick = { updateVm.dismiss() }) { Text("Plus tard") }
+            }
+        )
+    }
 
     Scaffold(
         bottomBar = {
@@ -207,15 +230,11 @@ fun DouSportsNavGraph() {
             }
 
             composable(Screen.Stats.route) {
-                StatsScreen()
-            }
-
-            composable(Screen.Calendar.route) {
-                CalendarScreen()
+                StatsScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(onNavigateToStats = { navController.navigate(Screen.Stats.route) })
             }
         }
     }

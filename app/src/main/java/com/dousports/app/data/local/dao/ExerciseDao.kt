@@ -61,4 +61,13 @@ interface ExerciseDao {
 
     @Query("SELECT COUNT(*) FROM exercises")
     suspend fun count(): Int
+
+    @Query("SELECT COUNT(*) FROM exercises WHERE isCustom = 0")
+    suspend fun countBuiltIn(): Int
+
+    @Query("DELETE FROM exercises WHERE isCustom = 0")
+    suspend fun deleteBuiltIn()
+
+    @Query("SELECT * FROM exercises WHERE id IN (:ids)")
+    suspend fun getExercisesByIds(ids: List<String>): List<ExerciseEntity>
 }

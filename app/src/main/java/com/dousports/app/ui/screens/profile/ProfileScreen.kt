@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,13 +26,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.dousports.app.data.local.entity.BodyMeasurementEntity
+import com.dousports.app.ui.screens.calendar.CalendarCard
+import com.dousports.app.ui.screens.calendar.CalendarViewModel
+import com.dousports.app.ui.screens.calendar.SessionCard
+import com.dousports.app.ui.screens.calendar.monthName
 import com.dousports.app.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
+fun ProfileScreen(
+    onNavigateToStats: () -> Unit = {},
+    viewModel: ProfileViewModel = hiltViewModel(),
+    calendarViewModel: CalendarViewModel = hiltViewModel()
+) {
     val state by viewModel.uiState.collectAsState()
+    val calState by calendarViewModel.uiState.collectAsState()
 
     if (state.showAddDialog) {
         AddMeasurementDialog(
@@ -63,18 +73,88 @@ fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text(
-                    "Mon Profil",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Mon Profil",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    OutlinedButton(
+                        onClick = onNavigateToStats,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy)
+                    ) {
+                        Icon(Icons.Default.BarChart, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Stats")
+                    }
+                }
             }
 
             item { CurrentStatsCard(state) }
 
             if (state.weightHistory.size >= 2) {
                 item { WeightChartCard(state.weightHistory) }
+            }
+
+            item {
+                Text(
+                    "Calendrier d'entraînement",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+            }
+
+            item {
+                CalendarCard(
+                    year = calState.year,
+                    month = calState.month,
+                    sessionsByDay = calState.sessionsByDay,
+                    selectedDay = calState.selectedDay,
+                    onPreviousMonth = calendarViewModel::previousMonth,
+                    onNextMonth = calendarViewModel::nextMonth,
+                    onDayClick = calendarViewModel::selectDay
+                )
+            }
+
+            if (calState.selectedDay != null) {
+                val sessions = calState.sessionsByDay[calState.selectedDay] ?: emptyList()
+                if (sessions.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Séances du ${calState.selectedDay} ${monthName(calState.month)}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                    }
+                    items(sessions) { session ->
+                        SessionCard(
+                            session = session,
+                            isExpanded = calState.selectedSession?.id == session.id,
+                            sets = if (calState.selectedSession?.id == session.id) calState.setsForSession else emptyList(),
+                            isLoadingSets = calState.isLoadingSets,
+                            onClick = { calendarViewModel.selectSession(session) }
+                        )
+                    }
+                } else {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Aucune séance ce jour", color = TextSecondary)
+                        }
+                    }
+                }
             }
 
             if (state.measurements.isNotEmpty()) {

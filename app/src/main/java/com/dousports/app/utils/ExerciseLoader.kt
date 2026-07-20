@@ -15,7 +15,7 @@ class ExerciseLoader @Inject constructor(
     private val repository: ExerciseRepository
 ) {
     suspend fun loadIfNeeded() {
-        if (repository.count() > 0) return
+        if (repository.countBuiltIn() > 0) return
 
         val json = context.assets.open("exercises.json").bufferedReader().readText()
         val type = object : TypeToken<List<ExerciseJson>>() {}.type

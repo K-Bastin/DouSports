@@ -28,6 +28,8 @@ import com.dousports.app.data.local.entity.RoutineExerciseEntity
 import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.ui.theme.OrangeEnergy
+import com.dousports.app.utils.toFrBodyPart
+import com.dousports.app.utils.toFrEquipment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -473,7 +475,7 @@ private fun ExercisePickerSheet(
                         headlineContent = { Text(exercise.name) },
                         supportingContent = {
                             Text(
-                                "${exercise.bodyPart} · ${exercise.equipment}",
+                                "${exercise.bodyPart.toFrBodyPart()} · ${exercise.equipment.toFrEquipment()}",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         },

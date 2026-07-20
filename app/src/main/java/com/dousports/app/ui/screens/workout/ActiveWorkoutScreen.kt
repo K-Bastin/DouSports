@@ -183,7 +183,9 @@ private fun ExerciseWorkoutPanel(
     }
     var weightInput by remember(exerciseIndex) {
         mutableStateOf(
-            if (exerciseState.routineExercise.targetWeight > 0)
+            exerciseState.previousSets.firstOrNull()?.weight?.let {
+                if (it > 0) it.toInt().toString() else null
+            } ?: if (exerciseState.routineExercise.targetWeight > 0)
                 exerciseState.routineExercise.targetWeight.toInt().toString()
             else ""
         )
