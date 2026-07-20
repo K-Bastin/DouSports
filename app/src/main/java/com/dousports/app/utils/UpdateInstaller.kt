@@ -22,7 +22,7 @@ class UpdateInstaller @Inject constructor(
         context.getSharedPreferences("update_installer", Context.MODE_PRIVATE)
     }
 
-    fun download(downloadUrl: String, version: String) {
+    fun download(downloadUrl: String, version: String): Long {
         val fileName = "DouSports-$version.apk"
         val dest = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
         if (dest.exists()) dest.delete()
@@ -38,6 +38,36 @@ class UpdateInstaller @Inject constructor(
         val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val id = dm.enqueue(request)
         prefs.edit().putLong("pending_id", id).putString("pending_version", version).apply()
+        return id
+    }
+
+    /** Returns progress 0f–1f, -1f on error, or null if unknown / not yet started. */
+    fun getDownloadProgress(downloadId: Long): Float? {
+        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val cursor = dm.query(DownloadManager.Query().setFilterById(downloadId))
+        if (!cursor.moveToFirst()) { cursor.close(); return null }
+        return try {
+            val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+            when (status) {
+                DownloadManager.STATUS_FAILED -> -1f
+                DownloadManager.STATUS_SUCCESSFUL -> 1f
+                else -> {
+                    val bytes = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    if (total > 0) bytes.toFloat() / total.toFloat() else null
+                }
+            }
+        } finally {
+            cursor.close()
+        }
+    }
+
+    fun openUninstall() {
+        val intent = Intent(Intent.ACTION_DELETE).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
     }
 
     fun getPendingId(): Long = prefs.getLong("pending_id", -1L)
