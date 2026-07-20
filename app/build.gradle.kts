@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.datastore.preferences)
+    implementation(libs.glance.appwidget)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

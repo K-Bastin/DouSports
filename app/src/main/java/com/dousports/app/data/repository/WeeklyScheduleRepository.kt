@@ -17,4 +17,6 @@ class WeeklyScheduleRepository @Inject constructor(
     }
 
     suspend fun clearDay(dayOfWeek: Int) = dao.clearDay(dayOfWeek)
+
+    suspend fun getScheduleForDay(dayOfWeek: Int): WeeklyScheduleEntity? = dao.getScheduleForDay(dayOfWeek)
 }

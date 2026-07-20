@@ -18,4 +18,7 @@ interface WeeklyScheduleDao {
 
     @Query("DELETE FROM weekly_schedule")
     suspend fun clearAll()
+
+    @Query("SELECT * FROM weekly_schedule WHERE dayOfWeek = :day LIMIT 1")
+    suspend fun getScheduleForDay(day: Int): WeeklyScheduleEntity?
 }
