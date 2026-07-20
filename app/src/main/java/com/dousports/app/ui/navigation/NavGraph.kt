@@ -1,7 +1,5 @@
 package com.dousports.app.ui.navigation
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,7 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -70,7 +67,6 @@ fun DouSportsNavGraph() {
 
     val updateVm: UpdateCheckViewModel = hiltViewModel()
     val updateInfo by updateVm.updateInfo.collectAsState()
-    val context = LocalContext.current
 
     updateInfo?.let { info ->
         AlertDialog(
@@ -78,10 +74,7 @@ fun DouSportsNavGraph() {
             title = { Text("Mise à jour disponible") },
             text = { Text("La version ${info.latestVersion} est disponible. Voulez-vous la télécharger ?") },
             confirmButton = {
-                TextButton(onClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl)))
-                    updateVm.dismiss()
-                }) { Text("Télécharger") }
+                TextButton(onClick = { updateVm.download() }) { Text("Télécharger") }
             },
             dismissButton = {
                 TextButton(onClick = { updateVm.dismiss() }) { Text("Plus tard") }
