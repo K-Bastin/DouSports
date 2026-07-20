@@ -2,11 +2,13 @@ package com.dousports.app.ui.screens.routines
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -16,9 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -134,6 +140,16 @@ class CreateRoutineViewModel @Inject constructor(
     fun removeExercise(tempId: Long) =
         _state.update { it.copy(exercises = it.exercises.filter { e -> e.tempId != tempId }) }
 
+    fun moveExercise(from: Int, to: Int) {
+        if (from == to) return
+        _state.update {
+            val list = it.exercises.toMutableList()
+            val item = list.removeAt(from)
+            list.add(to, item)
+            it.copy(exercises = list)
+        }
+    }
+
     fun updateExercise(tempId: Long, sets: Int? = null, reps: Int? = null, weight: Float? = null) {
         _state.update {
             it.copy(exercises = it.exercises.map { e ->
@@ -204,6 +220,11 @@ fun CreateRoutineScreen(
         return
     }
 
+    // Drag & drop state
+    val lazyListState = rememberLazyListState()
+    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOffset by remember { mutableStateOf(0f) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -238,6 +259,7 @@ fun CreateRoutineScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -298,13 +320,45 @@ fun CreateRoutineScreen(
             }
 
             itemsIndexed(state.exercises, key = { _, e -> e.tempId }) { index, exercise ->
+                val isDragging = draggedIndex == index
                 RoutineExerciseCard(
                     index = index + 1,
                     item = exercise,
+                    isDragging = isDragging,
+                    dragOffset = if (isDragging) dragOffset else 0f,
                     onRemove = { viewModel.removeExercise(exercise.tempId) },
                     onSetsChange = { viewModel.updateExercise(exercise.tempId, sets = it) },
                     onRepsChange = { viewModel.updateExercise(exercise.tempId, reps = it) },
-                    onWeightChange = { viewModel.updateExercise(exercise.tempId, weight = it) }
+                    onWeightChange = { viewModel.updateExercise(exercise.tempId, weight = it) },
+                    onDragStart = {
+                        draggedIndex = index
+                        dragOffset = 0f
+                    },
+                    onDrag = { delta ->
+                        dragOffset += delta
+                        // Determine target index from drag position
+                        val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                        val draggingItem = visibleItems.firstOrNull { it.key == exercise.tempId }
+                        if (draggingItem != null) {
+                            val centerY = draggingItem.offset + draggingItem.size / 2 + dragOffset
+                            val targetItem = visibleItems.firstOrNull { item ->
+                                item.key != exercise.tempId &&
+                                centerY >= item.offset && centerY <= item.offset + item.size
+                            }
+                            if (targetItem != null) {
+                                val targetIdx = state.exercises.indexOfFirst { it.tempId == targetItem.key }
+                                if (targetIdx >= 0 && targetIdx != index) {
+                                    viewModel.moveExercise(index, targetIdx)
+                                    draggedIndex = targetIdx
+                                    dragOffset = 0f
+                                }
+                            }
+                        }
+                    },
+                    onDragEnd = {
+                        draggedIndex = null
+                        dragOffset = 0f
+                    }
                 )
             }
 
@@ -349,15 +403,52 @@ private fun RoutineExerciseCard(
     onRemove: () -> Unit,
     onSetsChange: (Int) -> Unit,
     onRepsChange: (Int) -> Unit,
-    onWeightChange: (Float) -> Unit
+    onWeightChange: (Float) -> Unit,
+    isDragging: Boolean = false,
+    dragOffset: Float = 0f,
+    onDragStart: () -> Unit = {},
+    onDrag: (Float) -> Unit = {},
+    onDragEnd: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                translationY = dragOffset
+                shadowElevation = if (isDragging) 12.dp.toPx() else 0f
+                alpha = if (isDragging) 0.95f else 1f
+            },
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDragging)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Drag handle
+                Icon(
+                    Icons.Default.DragHandle,
+                    contentDescription = "Réorganiser",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .size(24.dp)
+                        .pointerInput(item.tempId) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { onDragStart() },
+                                onDragEnd = { onDragEnd() },
+                                onDragCancel = { onDragEnd() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    onDrag(dragAmount.y)
+                                }
+                            )
+                        }
+                )
+                Spacer(Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
                         .size(28.dp)
