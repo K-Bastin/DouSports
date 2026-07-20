@@ -231,7 +231,7 @@ private fun CurrentStatsCard(state: ProfileUiState) {
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Aucune donnée", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Aucune donnée", color = TextSecondary)
             }
             return@Card
         }
@@ -258,7 +258,7 @@ private fun VerticalDivider() {
         modifier = Modifier
             .width(1.dp)
             .height(56.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(Color(0xFF30363D))
     )
 }
 
@@ -267,7 +267,7 @@ private fun StatColumn(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = color)
         Spacer(Modifier.height(4.dp))
-        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, fontSize = 12.sp, color = TextSecondary)
     }
 }
 
@@ -296,12 +296,12 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                     "Évolution du poids",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = TextPrimary
                 )
                 Text(
                     "${history.size} mesures",
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextSecondary
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -372,17 +372,17 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                 Text(
                     dateFmt.format(Date(timestamps.first())),
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextSecondary
                 )
                 Text(
                     "min %.1f  max %.1f kg".format(minW, maxW),
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextSecondary
                 )
                 Text(
                     dateFmt.format(Date(timestamps.last())),
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextSecondary
                 )
             }
         }
@@ -407,14 +407,14 @@ private fun MeasurementRow(m: BodyMeasurementEntity, onDelete: () -> Unit) {
                 Text(
                     fmt.format(Date(m.recordedAt)),
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextSecondary
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "%.1f kg  •  %.0f cm".format(m.weightKg, m.heightCm),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = TextPrimary
                 )
             }
             IconButton(onClick = onDelete) {
@@ -467,6 +467,6 @@ private fun AddMeasurementDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Annuler") }
         },
-        containerColor = CardDark
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }
