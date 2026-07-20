@@ -1,6 +1,7 @@
 package com.dousports.app.data.local.dao
 
 import androidx.room.*
+import com.dousports.app.data.local.entity.ExerciseProgressPoint
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
 import com.dousports.app.data.local.entity.WorkoutSetEntity
 import kotlinx.coroutines.flow.Flow
@@ -64,4 +65,14 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workout_sets")
     suspend fun getAllSets(): List<WorkoutSetEntity>
+
+    @Query("""
+        SELECT MIN(loggedAt) as sessionTime, MAX(weight) as maxWeight
+        FROM workout_sets
+        WHERE exerciseId = :exerciseId AND weight > 0
+        GROUP BY sessionId
+        ORDER BY sessionTime ASC
+        LIMIT :limit
+    """)
+    suspend fun getProgressionForExercise(exerciseId: String, limit: Int = 20): List<ExerciseProgressPoint>
 }
