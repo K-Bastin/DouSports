@@ -66,6 +66,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_sets")
     suspend fun getAllSets(): List<WorkoutSetEntity>
 
+    @Query("SELECT * FROM workout_sets WHERE loggedAt >= :since")
+    suspend fun getAllSetsSince(since: Long): List<WorkoutSetEntity>
+
     @Query("""
         SELECT MIN(loggedAt) as sessionTime, MAX(weight) as maxWeight
         FROM workout_sets

@@ -7,6 +7,7 @@ import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.utils.startOfMonthMillis
 import com.dousports.app.utils.startOfWeekMillis
+import java.util.concurrent.TimeUnit
 import com.dousports.app.utils.toFrBodyPart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -29,7 +30,9 @@ data class ExerciseStats(
 data class MuscleGroupStats(
     val name: String,
     val totalSets: Int,
-    val percentage: Float
+    val totalVolume: Float,
+    val percentage: Float,
+    val colorIndex: Int = 0
 )
 
 data class StatsUiState(
@@ -98,17 +101,27 @@ class StatsViewModel @Inject constructor(
                     .getExercisesByIds(allSets.map { it.exerciseId }.distinct())
                     .associateBy { it.id }
 
-                val muscleGroups = allSets
-                    .groupBy { exerciseMap[it.exerciseId]?.bodyPart ?: "other" }
-                    .map { (bodyPart, sets) -> bodyPart to sets.size }
-                    .sortedByDescending { it.second }
+                val since28Days = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(28)
+                val recentSets = workoutRepository.getAllSetsSince(since28Days)
+                val recentExerciseMap = exerciseRepository
+                    .getExercisesByIds(recentSets.map { it.exerciseId }.distinct())
+                    .associateBy { it.id }
+
+                val muscleGroups = recentSets
+                    .groupBy { recentExerciseMap[it.exerciseId]?.bodyPart ?: "other" }
+                    .map { (bodyPart, sets) ->
+                        bodyPart to Pair(sets.size, sets.sumOf { (it.reps * it.weight).toDouble() }.toFloat())
+                    }
+                    .sortedByDescending { it.second.second }
                     .let { list ->
-                        val total = list.sumOf { it.second }.coerceAtLeast(1)
-                        list.map { (bodyPart, count) ->
+                        val totalVolume = list.sumOf { it.second.second.toDouble() }.toFloat().coerceAtLeast(1f)
+                        list.mapIndexed { index, (bodyPart, pair) ->
                             MuscleGroupStats(
                                 name = bodyPart.toFrBodyPart(),
-                                totalSets = count,
-                                percentage = count.toFloat() / total
+                                totalSets = pair.first,
+                                totalVolume = pair.second,
+                                percentage = pair.second / totalVolume,
+                                colorIndex = index
                             )
                         }
                     }
