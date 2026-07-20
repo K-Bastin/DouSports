@@ -1,6 +1,7 @@
 package com.dousports.app.ui.screens.routines
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -19,11 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -53,9 +57,23 @@ data class RoutineExerciseItem(
     val restSeconds: Int = 90
 )
 
+val ROUTINE_COLORS = listOf(
+    0xFFFF6200.toInt(),
+    0xFF2196F3.toInt(),
+    0xFF4CAF50.toInt(),
+    0xFF9C27B0.toInt(),
+    0xFFF44336.toInt(),
+    0xFF009688.toInt(),
+    0xFFE91E63.toInt(),
+    0xFF3F51B5.toInt(),
+    0xFFFF9800.toInt(),
+    0xFF00BCD4.toInt()
+)
+
 data class CreateRoutineState(
     val name: String = "",
     val description: String = "",
+    val color: Int = 0,
     val exercises: List<RoutineExerciseItem> = emptyList(),
     val exerciseSearchQuery: String = "",
     val exerciseSearchResults: List<ExerciseEntity> = emptyList(),
@@ -105,6 +123,7 @@ class CreateRoutineViewModel @Inject constructor(
                 it.copy(
                     name = routine.name,
                     description = routine.description,
+                    color = routine.color,
                     exercises = items
                 )
             }
@@ -113,6 +132,7 @@ class CreateRoutineViewModel @Inject constructor(
 
     fun onNameChange(name: String) = _state.update { it.copy(name = name) }
     fun onDescriptionChange(desc: String) = _state.update { it.copy(description = desc) }
+    fun onColorChange(color: Int) = _state.update { it.copy(color = color) }
 
     fun showPicker() = _state.update { it.copy(isPickerVisible = true) }
     fun hidePicker() = _state.update { it.copy(isPickerVisible = false) }
@@ -168,12 +188,12 @@ class CreateRoutineViewModel @Inject constructor(
             val s = _state.value
             val id = if (routineId != null) {
                 workoutRepository.updateRoutine(
-                    RoutineEntity(id = routineId, name = s.name, description = s.description)
+                    RoutineEntity(id = routineId, name = s.name, description = s.description, color = s.color)
                 )
                 routineId
             } else {
                 workoutRepository.insertRoutine(
-                    RoutineEntity(name = s.name, description = s.description)
+                    RoutineEntity(name = s.name, description = s.description, color = s.color)
                 )
             }
             val items = s.exercises.mapIndexed { index, e ->
@@ -300,6 +320,13 @@ fun CreateRoutineScreen(
             }
 
             item {
+                RoutineColorPicker(
+                    selectedColor = state.color,
+                    onColorSelected = viewModel::onColorChange
+                )
+            }
+
+            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -400,6 +427,52 @@ fun CreateRoutineScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoutineColorPicker(selectedColor: Int, onColorSelected: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Couleur de la routine",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(ROUTINE_COLORS) { colorInt ->
+                val isSelected = selectedColor == colorInt
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(colorInt))
+                        .then(
+                            if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
+                            else Modifier
+                        )
+                        .clickable { onColorSelected(colorInt) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+        if (selectedColor != 0) {
+            TextButton(
+                onClick = { onColorSelected(0) },
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("Réinitialiser", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
         }
     }

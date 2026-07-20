@@ -183,7 +183,7 @@ internal fun CalendarCard(
                                     DayCell(
                                         day = day,
                                         hasSession = sessionsByDay.containsKey(day),
-                                        sessionCount = sessionsByDay[day]?.size ?: 0,
+                                        sessionColors = sessionsByDay[day]?.map { it.routineColor } ?: emptyList(),
                                         isSelected = selectedDay == day,
                                         isToday = isCurrentDay,
                                         onClick = { onDayClick(day) }
@@ -218,7 +218,7 @@ internal fun CalendarCard(
 internal fun DayCell(
     day: Int,
     hasSession: Boolean,
-    sessionCount: Int,
+    sessionColors: List<Int>,
     isSelected: Boolean,
     isToday: Boolean,
     onClick: () -> Unit
@@ -259,12 +259,17 @@ internal fun DayCell(
         if (hasSession) {
             Spacer(Modifier.height(1.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                repeat(sessionCount.coerceAtMost(3)) {
+                sessionColors.take(3).forEach { colorInt ->
+                    val dotColor = when {
+                        isSelected -> Color.White
+                        colorInt != 0 -> Color(colorInt)
+                        else -> OrangeEnergy
+                    }
                     Box(
                         Modifier
                             .size(4.dp)
                             .clip(CircleShape)
-                            .background(if (isSelected) Color.White else OrangeEnergy)
+                            .background(dotColor)
                     )
                 }
             }
