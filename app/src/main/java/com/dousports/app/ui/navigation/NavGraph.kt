@@ -13,6 +13,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.dousports.app.ui.screens.exercises.ExerciseDetailScreen
 import com.dousports.app.ui.screens.exercises.ExercisesScreen
+import com.dousports.app.ui.screens.history.WorkoutHistoryScreen
 import com.dousports.app.ui.screens.home.HomeScreen
 import com.dousports.app.ui.screens.profile.ProfileScreen
 import com.dousports.app.ui.screens.exercises.CreateExerciseScreen
@@ -42,6 +43,7 @@ sealed class Screen(val route: String) {
     }
     object Stats : Screen("stats")
     object Profile : Screen("profile")
+    object WorkoutHistory : Screen("workout-history")
 }
 
 data class BottomNavItem(
@@ -227,7 +229,14 @@ fun DouSportsNavGraph() {
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen(onNavigateToStats = { navController.navigate(Screen.Stats.route) })
+                ProfileScreen(
+                    onNavigateToStats = { navController.navigate(Screen.Stats.route) },
+                    onNavigateToHistory = { navController.navigate(Screen.WorkoutHistory.route) }
+                )
+            }
+
+            composable(Screen.WorkoutHistory.route) {
+                WorkoutHistoryScreen(onBack = { navController.popBackStack() })
             }
         }
     }
