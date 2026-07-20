@@ -1,34 +1,49 @@
 package com.dousports.app.ui.screens.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.dousports.app.data.local.entity.BodyMeasurementEntity
+import com.dousports.app.data.local.entity.ProgressPhotoEntity
 import com.dousports.app.ui.screens.calendar.CalendarCard
 import com.dousports.app.ui.screens.calendar.CalendarViewModel
 import com.dousports.app.ui.screens.calendar.SessionCard
@@ -38,9 +53,12 @@ import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.ui.theme.RedError
 import com.dousports.app.ui.theme.YellowWarning
 import com.dousports.app.ui.viewmodel.ThemeViewModel
+import com.dousports.app.utils.toFormattedDate
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateToStats: () -> Unit = {},
@@ -52,6 +70,90 @@ fun ProfileScreen(
     val state by viewModel.uiState.collectAsState()
     val calState by calendarViewModel.uiState.collectAsState()
     val isDarkTheme by themeViewModel.isDarkTheme.collectAsState()
+    val context = LocalContext.current
+
+    var pendingCameraFile by remember { mutableStateOf<File?>(null) }
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) pendingCameraFile?.let { viewModel.savePhotoFromFile(it) }
+        pendingCameraFile = null
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { viewModel.savePhotoFromUri(it) }
+    }
+
+    state.selectedPhoto?.let { photo ->
+        AlertDialog(
+            onDismissRequest = { viewModel.selectPhoto(null) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AsyncImage(
+                        model = File(photo.filePath),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Text(
+                        photo.recordedAt.toFormattedDate(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.selectPhoto(null) }) { Text("Fermer") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.deleteSelectedPhoto() }) {
+                    Text("Supprimer", color = RedError)
+                }
+            }
+        )
+    }
+
+    if (showPhotoSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showPhotoSourceDialog = false },
+            title = { Text("Ajouter une photo") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            val file = viewModel.createPhotoFile()
+                            pendingCameraFile = file
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                            cameraLauncher.launch(uri)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Prendre une photo")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            galleryLauncher.launch("image/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Choisir depuis la galerie")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPhotoSourceDialog = false }) { Text("Annuler") }
+            }
+        )
+    }
 
     if (state.showAddDialog) {
         AddMeasurementDialog(
@@ -187,6 +289,57 @@ fun ProfileScreen(
                 }
             }
 
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Photos de progression",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    IconButton(onClick = { showPhotoSourceDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Ajouter une photo", tint = OrangeEnergy)
+                    }
+                }
+            }
+
+            if (state.photos.isNotEmpty()) {
+                item {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 600.dp),
+                        userScrollEnabled = false
+                    ) {
+                        items(state.photos) { photo ->
+                            PhotoThumbnail(photo = photo, onClick = { viewModel.selectPhoto(photo) })
+                        }
+                    }
+                }
+            } else {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Aucune photo. Appuyez sur + pour ajouter.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
             if (state.measurements.isNotEmpty()) {
                 item {
                     Text(
@@ -214,6 +367,39 @@ fun ProfileScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoThumbnail(photo: ProgressPhotoEntity, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = File(photo.filePath),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .padding(4.dp)
+            ) {
+                Text(
+                    photo.recordedAt.toFormattedDate(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White
+                )
             }
         }
     }

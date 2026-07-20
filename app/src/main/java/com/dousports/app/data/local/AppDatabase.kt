@@ -6,6 +6,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.dousports.app.data.local.dao.ExerciseDao
 import com.dousports.app.data.local.dao.ProfileDao
+import com.dousports.app.data.local.dao.ProgressPhotoDao
 import com.dousports.app.data.local.dao.RoutineDao
 import com.dousports.app.data.local.dao.WeeklyScheduleDao
 import com.dousports.app.data.local.dao.WorkoutDao
@@ -19,9 +20,10 @@ import com.dousports.app.data.local.entity.*
         WorkoutSessionEntity::class,
         WorkoutSetEntity::class,
         BodyMeasurementEntity::class,
-        WeeklyScheduleEntity::class
+        WeeklyScheduleEntity::class,
+        ProgressPhotoEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,6 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun profileDao(): ProfileDao
     abstract fun weeklyScheduleDao(): WeeklyScheduleDao
+    abstract fun progressPhotoDao(): ProgressPhotoDao
 
     companion object {
         const val DATABASE_NAME = "dousports.db"
@@ -80,6 +83,18 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE workout_sessions ADD COLUMN routineColor INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `progress_photos` " +
+                    "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`filePath` TEXT NOT NULL, " +
+                    "`recordedAt` INTEGER NOT NULL, " +
+                    "`notes` TEXT NOT NULL)"
+                )
             }
         }
     }
