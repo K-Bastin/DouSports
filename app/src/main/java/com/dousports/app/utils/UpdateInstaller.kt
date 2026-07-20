@@ -3,8 +3,11 @@ package com.dousports.app.utils
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -20,26 +23,37 @@ class UpdateInstaller @Inject constructor(
     }
 
     fun download(downloadUrl: String, version: String) {
-        val dest = File(
-            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
-            "DouSports-$version.apk"
-        )
+        val fileName = "DouSports-$version.apk"
+        val dest = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
         if (dest.exists()) dest.delete()
 
         val request = DownloadManager.Request(Uri.parse(downloadUrl))
             .setTitle("DouSports $version")
             .setDescription("Téléchargement de la mise à jour...")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationUri(Uri.fromFile(dest))
+            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
 
         val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val id = dm.enqueue(request)
-        prefs.edit().putLong("pending_id", id).apply()
+        prefs.edit().putLong("pending_id", id).putString("pending_version", version).apply()
     }
 
     fun getPendingId(): Long = prefs.getLong("pending_id", -1L)
+
+    fun canInstallPackages(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            context.packageManager.canRequestPackageInstalls()
+        else true
+
+    fun openInstallPermissionSettings() {
+        val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
 
     fun installOnCompletion(downloadId: Long) {
         val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -47,10 +61,17 @@ class UpdateInstaller @Inject constructor(
         if (cursor.moveToFirst()) {
             val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
             if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                val localUri = cursor.getString(
-                    cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI)
-                )
-                val file = File(Uri.parse(localUri).path!!)
+                if (!canInstallPackages()) {
+                    // Store pending state so the user can retry after granting permission
+                    prefs.edit().putLong("pending_install_id", downloadId).apply()
+                    openInstallPermissionSettings()
+                    cursor.close()
+                    return
+                }
+                val version = prefs.getString("pending_version", null)
+                val fileName = "DouSports-$version.apk"
+                val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                if (!file.exists()) { cursor.close(); return }
                 val apkUri = FileProvider.getUriForFile(
                     context,
                     "${context.packageName}.provider",
@@ -62,9 +83,17 @@ class UpdateInstaller @Inject constructor(
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 context.startActivity(intent)
+                prefs.edit().remove("pending_id").remove("pending_version")
+                    .remove("pending_install_id").apply()
             }
         }
         cursor.close()
-        prefs.edit().remove("pending_id").apply()
+    }
+
+    fun retryPendingInstall() {
+        val pendingId = prefs.getLong("pending_install_id", -1L)
+        if (pendingId != -1L && canInstallPackages()) {
+            installOnCompletion(pendingId)
+        }
     }
 }
