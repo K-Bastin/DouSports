@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.dousports.app.data.local.entity.RoutineEntity
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
+import com.dousports.app.ui.theme.GreenSuccess
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.toDurationString
 import com.dousports.app.utils.toFormattedDate
@@ -109,6 +110,18 @@ fun HomeScreen(
                     label = "Routines\ncréées"
                 )
             }
+        }
+
+        item { Spacer(Modifier.height(12.dp)) }
+
+        item {
+            StreakCard(
+                streak = uiState.streak,
+                weeklyCount = uiState.weeklyCount,
+                weeklyGoal = uiState.weeklyGoal,
+                onGoalChange = { viewModel.setWeeklyGoal(it) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
 
         item { Spacer(Modifier.height(24.dp)) }
@@ -327,6 +340,115 @@ private fun EmptyRoutinesCard(onNavigateToRoutines: () -> Unit) {
                 Text("Créer une routine", color = OrangeEnergy)
             }
         }
+    }
+}
+
+@Composable
+private fun StreakCard(
+    streak: Int,
+    weeklyCount: Int,
+    weeklyGoal: Int,
+    onGoalChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showGoalPicker by remember { mutableStateOf(false) }
+    val progress = (weeklyCount.toFloat() / weeklyGoal).coerceIn(0f, 1f)
+    val goalReached = weeklyCount >= weeklyGoal
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("🔥", fontSize = 24.sp)
+                    Column {
+                        Text(
+                            "$streak jour${if (streak != 1) "s" else ""}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = OrangeEnergy
+                        )
+                        Text(
+                            "Série d'entraînement",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                TextButton(onClick = { showGoalPicker = true }) {
+                    Text("Objectif : $weeklyGoal/sem", color = OrangeEnergy, fontSize = 12.sp)
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Objectif hebdomadaire",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "$weeklyCount / $weeklyGoal séances",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (goalReached) GreenSuccess else MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = if (goalReached) GreenSuccess else OrangeEnergy,
+                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                )
+            }
+        }
+    }
+
+    if (showGoalPicker) {
+        AlertDialog(
+            onDismissRequest = { showGoalPicker = false },
+            title = { Text("Objectif hebdomadaire") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Choisissez le nombre de séances par semaine :", style = MaterialTheme.typography.bodyMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        (1..7).forEach { n ->
+                            FilterChip(
+                                selected = weeklyGoal == n,
+                                onClick = { onGoalChange(n); showGoalPicker = false },
+                                label = { Text("$n") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = OrangeEnergy,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showGoalPicker = false }) { Text("Fermer") }
+            }
+        )
     }
 }
 
