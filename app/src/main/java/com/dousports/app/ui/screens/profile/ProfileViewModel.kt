@@ -1,19 +1,25 @@
 package com.dousports.app.ui.screens.profile
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dousports.app.data.local.entity.BodyMeasurementEntity
+import com.dousports.app.data.local.entity.ProgressPhotoEntity
 import com.dousports.app.data.repository.ProfileRepository
+import com.dousports.app.data.repository.ProgressPhotoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 data class ProfileUiState(
     val measurements: List<BodyMeasurementEntity> = emptyList(),
+    val photos: List<ProgressPhotoEntity> = emptyList(),
     val heightInput: String = "",
     val weightInput: String = "",
-    val showAddDialog: Boolean = false
+    val showAddDialog: Boolean = false,
+    val selectedPhoto: ProgressPhotoEntity? = null
 ) {
     val latest: BodyMeasurementEntity? get() = measurements.firstOrNull()
     val bmi: Float? get() {
@@ -27,7 +33,8 @@ data class ProfileUiState(
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val repository: ProfileRepository
+    private val repository: ProfileRepository,
+    private val photoRepository: ProgressPhotoRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -35,8 +42,13 @@ class ProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.getAllMeasurements().collect { list ->
-                _uiState.update { it.copy(measurements = list) }
+            combine(
+                repository.getAllMeasurements(),
+                photoRepository.getAllPhotos()
+            ) { measurements, photos ->
+                measurements to photos
+            }.collect { (measurements, photos) ->
+                _uiState.update { it.copy(measurements = measurements, photos = photos) }
             }
         }
     }
@@ -66,5 +78,25 @@ class ProfileViewModel @Inject constructor(
 
     fun deleteMeasurement(m: BodyMeasurementEntity) {
         viewModelScope.launch { repository.deleteMeasurement(m) }
+    }
+
+    fun createPhotoFile(): File = photoRepository.createPhotoFile()
+
+    fun savePhotoFromUri(uri: Uri) {
+        viewModelScope.launch { photoRepository.savePhotoFromUri(uri) }
+    }
+
+    fun savePhotoFromFile(file: File) {
+        viewModelScope.launch { photoRepository.savePhotoFromFile(file) }
+    }
+
+    fun selectPhoto(photo: ProgressPhotoEntity?) = _uiState.update { it.copy(selectedPhoto = photo) }
+
+    fun deleteSelectedPhoto() {
+        val photo = _uiState.value.selectedPhoto ?: return
+        viewModelScope.launch {
+            photoRepository.deletePhoto(photo)
+            _uiState.update { it.copy(selectedPhoto = null) }
+        }
     }
 }
