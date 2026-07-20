@@ -22,11 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
 import com.dousports.app.ui.theme.GreenSuccess
-import com.dousports.app.ui.theme.NavyDark
 import com.dousports.app.ui.theme.OrangeEnergy
-import com.dousports.app.ui.theme.TextPrimary
-import com.dousports.app.ui.theme.TextSecondary
-import com.dousports.app.ui.theme.CardDark
 import com.dousports.app.utils.toDurationString
 import com.dousports.app.utils.toFormattedDate
 import com.dousports.app.utils.toFormattedTime
@@ -86,10 +82,10 @@ fun StatsScreen(
                     modifier = Modifier.clip(RoundedCornerShape(12.dp))
                 ) {
                     Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                        Text("Cette semaine", modifier = Modifier.padding(vertical = 12.dp), color = if (selectedTab == 0) OrangeEnergy else TextSecondary)
+                        Text("Cette semaine", modifier = Modifier.padding(vertical = 12.dp), color = if (selectedTab == 0) OrangeEnergy else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                        Text("Ce mois", modifier = Modifier.padding(vertical = 12.dp), color = if (selectedTab == 1) OrangeEnergy else TextSecondary)
+                        Text("Ce mois", modifier = Modifier.padding(vertical = 12.dp), color = if (selectedTab == 1) OrangeEnergy else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
