@@ -11,5 +11,6 @@ data class WorkoutSessionEntity(
     val startedAt: Long = System.currentTimeMillis(),
     val finishedAt: Long? = null,
     val durationSeconds: Long = 0,
-    val notes: String = ""
+    val notes: String = "",
+    val routineColor: Int = 0
 )

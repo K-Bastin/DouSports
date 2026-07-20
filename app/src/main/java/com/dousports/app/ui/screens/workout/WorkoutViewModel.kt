@@ -29,6 +29,7 @@ data class ExerciseWorkoutState(
 data class ActiveWorkoutUiState(
     val routineId: Long = 0,
     val routineName: String = "",
+    val routineColor: Int = 0,
     val exercises: List<ExerciseWorkoutState> = emptyList(),
     val currentExerciseIndex: Int = 0,
     val elapsedSeconds: Long = 0L,
@@ -63,7 +64,8 @@ class WorkoutViewModel @Inject constructor(
                 WorkoutSessionEntity(
                     routineId = routineId,
                     routineName = routine.name,
-                    startedAt = startedAt
+                    startedAt = startedAt,
+                    routineColor = routine.color
                 )
             )
 
@@ -77,6 +79,7 @@ class WorkoutViewModel @Inject constructor(
                 it.copy(
                     routineId = routineId,
                     routineName = routine.name,
+                    routineColor = routine.color,
                     exercises = exerciseStates,
                     sessionId = sessionId,
                     sessionStartedAt = startedAt,
@@ -188,7 +191,8 @@ class WorkoutViewModel @Inject constructor(
                     routineName = state.routineName,
                     startedAt = state.sessionStartedAt,
                     finishedAt = System.currentTimeMillis(),
-                    durationSeconds = duration
+                    durationSeconds = duration,
+                    routineColor = state.routineColor
                 )
             )
 

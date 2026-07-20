@@ -9,5 +9,6 @@ data class RoutineEntity(
     val name: String,
     val description: String = "",
     val createdAt: Long = System.currentTimeMillis(),
-    val lastPerformedAt: Long? = null
+    val lastPerformedAt: Long? = null,
+    val color: Int = 0
 )
