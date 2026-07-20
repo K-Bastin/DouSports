@@ -3,6 +3,7 @@ package com.dousports.app.data.repository
 import com.dousports.app.data.local.dao.RoutineDao
 import com.dousports.app.data.local.dao.WorkoutDao
 import com.dousports.app.data.local.entity.*
+import com.dousports.app.data.local.entity.ExerciseProgressPoint
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -94,4 +95,7 @@ class WorkoutRepository @Inject constructor(
         workoutDao.getSetsForSessionSync(sessionId)
 
     suspend fun getAllSets(): List<WorkoutSetEntity> = workoutDao.getAllSets()
+
+    suspend fun getProgressionForExercise(exerciseId: String, limit: Int = 20): List<ExerciseProgressPoint> =
+        workoutDao.getProgressionForExercise(exerciseId, limit)
 }
