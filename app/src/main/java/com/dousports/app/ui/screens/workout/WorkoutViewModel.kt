@@ -36,7 +36,10 @@ data class ActiveWorkoutUiState(
     val sessionStartedAt: Long = 0L,
     val isLoading: Boolean = true,
     val isFinished: Boolean = false,
-    val prBeatenExerciseName: String? = null
+    val prBeatenExerciseName: String? = null,
+    val restTimerTotalSeconds: Int = 90,
+    val restTimerRemaining: Int? = null,
+    val restTimerFinished: Boolean = false
 )
 
 @HiltViewModel
@@ -48,6 +51,7 @@ class WorkoutViewModel @Inject constructor(
     val uiState: StateFlow<ActiveWorkoutUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var restTimerJob: Job? = null
 
     fun loadRoutine(routineId: Long) {
         viewModelScope.launch {
@@ -128,6 +132,32 @@ class WorkoutViewModel @Inject constructor(
                 )
             )
         }
+
+        // Start rest timer
+        startRestTimer(current.routineExercise.restSeconds.takeIf { it > 0 } ?: _uiState.value.restTimerTotalSeconds)
+    }
+
+    private fun startRestTimer(durationSeconds: Int) {
+        restTimerJob?.cancel()
+        _uiState.update { it.copy(restTimerTotalSeconds = durationSeconds, restTimerRemaining = durationSeconds, restTimerFinished = false) }
+        restTimerJob = viewModelScope.launch {
+            var remaining = durationSeconds
+            while (remaining > 0) {
+                delay(1000)
+                remaining--
+                _uiState.update { it.copy(restTimerRemaining = remaining) }
+            }
+            _uiState.update { it.copy(restTimerRemaining = null, restTimerFinished = true) }
+        }
+    }
+
+    fun skipRestTimer() {
+        restTimerJob?.cancel()
+        _uiState.update { it.copy(restTimerRemaining = null, restTimerFinished = false) }
+    }
+
+    fun clearRestTimerFinished() {
+        _uiState.update { it.copy(restTimerFinished = false) }
     }
 
     fun clearPrBeaten() {
@@ -189,5 +219,6 @@ class WorkoutViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         timerJob?.cancel()
+        restTimerJob?.cancel()
     }
 }
