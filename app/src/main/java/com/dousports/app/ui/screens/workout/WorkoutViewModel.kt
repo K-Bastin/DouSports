@@ -2,9 +2,11 @@ package com.dousports.app.ui.screens.workout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.data.local.entity.RoutineExerciseEntity
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
 import com.dousports.app.data.local.entity.WorkoutSetEntity
+import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -21,6 +23,7 @@ data class LoggedSet(
 
 data class ExerciseWorkoutState(
     val routineExercise: RoutineExerciseEntity,
+    val exercise: ExerciseEntity? = null,
     val loggedSets: List<LoggedSet> = emptyList(),
     val previousSets: List<WorkoutSetEntity> = emptyList(),
     val personalRecord: Float? = null
@@ -29,6 +32,7 @@ data class ExerciseWorkoutState(
 data class ActiveWorkoutUiState(
     val routineId: Long = 0,
     val routineName: String = "",
+    val routineColor: Int = 0,
     val exercises: List<ExerciseWorkoutState> = emptyList(),
     val currentExerciseIndex: Int = 0,
     val elapsedSeconds: Long = 0L,
@@ -44,7 +48,8 @@ data class ActiveWorkoutUiState(
 
 @HiltViewModel
 class WorkoutViewModel @Inject constructor(
-    private val repository: WorkoutRepository
+    private val repository: WorkoutRepository,
+    private val exerciseRepository: ExerciseRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveWorkoutUiState())
@@ -63,20 +68,23 @@ class WorkoutViewModel @Inject constructor(
                 WorkoutSessionEntity(
                     routineId = routineId,
                     routineName = routine.name,
-                    startedAt = startedAt
+                    startedAt = startedAt,
+                    routineColor = routine.color
                 )
             )
 
             val exerciseStates = routineExercises.map { re ->
                 val prev = repository.getRecentSetsForExercise(re.exerciseId, 10)
                 val pr = repository.maxWeightForExercise(re.exerciseId)
-                ExerciseWorkoutState(routineExercise = re, previousSets = prev, personalRecord = pr)
+                val exercise = exerciseRepository.getExerciseById(re.exerciseId)
+                ExerciseWorkoutState(routineExercise = re, exercise = exercise, previousSets = prev, personalRecord = pr)
             }
 
             _uiState.update {
                 it.copy(
                     routineId = routineId,
                     routineName = routine.name,
+                    routineColor = routine.color,
                     exercises = exerciseStates,
                     sessionId = sessionId,
                     sessionStartedAt = startedAt,
@@ -188,7 +196,8 @@ class WorkoutViewModel @Inject constructor(
                     routineName = state.routineName,
                     startedAt = state.sessionStartedAt,
                     finishedAt = System.currentTimeMillis(),
-                    durationSeconds = duration
+                    durationSeconds = duration,
+                    routineColor = state.routineColor
                 )
             )
 

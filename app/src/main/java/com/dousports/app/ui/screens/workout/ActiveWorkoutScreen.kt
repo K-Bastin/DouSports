@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,9 +32,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.request.ImageRequest
+import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.ui.theme.GreenSuccess
 import com.dousports.app.ui.theme.OrangeEnergy
+import com.dousports.app.utils.gifUrl
+import com.dousports.app.utils.stepsAsList
 import com.dousports.app.utils.toDurationString
+import com.dousports.app.utils.toFrBodyPart
+import com.dousports.app.utils.toFrEquipment
 
 @Composable
 fun ActiveWorkoutScreen(
@@ -259,6 +270,7 @@ private fun RestTimerBar(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExerciseWorkoutPanel(
     exerciseState: ExerciseWorkoutState,
@@ -278,6 +290,14 @@ private fun ExerciseWorkoutPanel(
             else ""
         )
     }
+    var showInfoSheet by remember(exerciseIndex) { mutableStateOf(false) }
+
+    if (showInfoSheet && exerciseState.exercise != null) {
+        ExerciseInfoSheet(
+            exercise = exerciseState.exercise,
+            onDismiss = { showInfoSheet = false }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -285,32 +305,48 @@ private fun ExerciseWorkoutPanel(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text(
-                exerciseState.routineExercise.exerciseName,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                "${exerciseState.routineExercise.targetSets} séries × ${exerciseState.routineExercise.targetReps} reps",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            val pr = exerciseState.personalRecord
-            if (pr != null && pr > 0f) {
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.EmojiEvents,
-                        contentDescription = null,
-                        tint = OrangeEnergy,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Record : %.1f kg".format(pr),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OrangeEnergy
+                        exerciseState.routineExercise.exerciseName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        "${exerciseState.routineExercise.targetSets} séries × ${exerciseState.routineExercise.targetReps} reps",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val pr = exerciseState.personalRecord
+                    if (pr != null && pr > 0f) {
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = OrangeEnergy,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "Record : %.1f kg".format(pr),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OrangeEnergy
+                            )
+                        }
+                    }
+                }
+                if (exerciseState.exercise != null) {
+                    IconButton(onClick = { showInfoSheet = true }) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = "Voir l'exercice",
+                            tint = OrangeEnergy
+                        )
+                    }
                 }
             }
         }
@@ -484,4 +520,96 @@ private fun WorkoutNumberField(
             cursorColor = OrangeEnergy
         )
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExerciseInfoSheet(exercise: ExerciseEntity, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
+    val steps = remember(exercise.id) { exercise.stepsAsList() }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(exercise.gifUrl())
+                    .decoderFactory(GifDecoder.Factory())
+                    .crossfade(true)
+                    .build(),
+                contentDescription = exercise.name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+
+            Text(
+                exercise.name,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(
+                    onClick = {},
+                    label = { Text(exercise.bodyPart.toFrBodyPart(), fontSize = 12.sp) }
+                )
+                AssistChip(
+                    onClick = {},
+                    label = { Text(exercise.equipment.toFrEquipment(), fontSize = 12.sp) }
+                )
+            }
+
+            if (steps.isNotEmpty()) {
+                Text(
+                    "Instructions",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                steps.forEachIndexed { index, step ->
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(OrangeEnergy),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "${index + 1}",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            step,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
