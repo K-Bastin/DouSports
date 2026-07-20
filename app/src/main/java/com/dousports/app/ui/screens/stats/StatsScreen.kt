@@ -45,22 +45,22 @@ fun StatsScreen(
         topBar = {
             if (onBack != null) {
                 TopAppBar(
-                    title = { Text("Statistiques", color = TextPrimary) },
+                    title = { Text("Statistiques", color = MaterialTheme.colorScheme.onBackground) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, "Retour", tint = TextPrimary)
+                            Icon(Icons.Default.ArrowBack, "Retour", tint = MaterialTheme.colorScheme.onBackground)
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = NavyDark)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
                 )
             }
         },
-        containerColor = NavyDark
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
+            .background(MaterialTheme.colorScheme.background)
             .padding(padding),
         contentPadding = PaddingValues(bottom = 32.dp)
     ) {
@@ -70,7 +70,7 @@ fun StatsScreen(
                 "Statistiques",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
             )
         }
@@ -81,7 +81,7 @@ fun StatsScreen(
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 TabRow(
                     selectedTabIndex = selectedTab,
-                    containerColor = CardDark,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = OrangeEnergy,
                     modifier = Modifier.clip(RoundedCornerShape(12.dp))
                 ) {
@@ -154,7 +154,7 @@ fun StatsScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardDark)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         uiState.muscleGroups.forEach { mg ->
@@ -189,7 +189,7 @@ fun StatsScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardDark)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -205,7 +205,7 @@ fun StatsScreen(
                             Icon(Icons.Default.EmojiEvents, null, tint = Gold, modifier = Modifier.size(20.dp))
                         }
                         Spacer(Modifier.width(12.dp))
-                        Text(pr.exerciseName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), color = TextPrimary)
+                        Text(pr.exerciseName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onBackground)
                         Text("%.1f kg".format(pr.maxWeight), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = OrangeEnergy)
                     }
                 }
@@ -231,13 +231,13 @@ fun StatsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.BarChart, null, tint = TextSecondary, modifier = Modifier.size(64.dp))
+                        Icon(Icons.Default.BarChart, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(64.dp))
                         Spacer(Modifier.height(16.dp))
-                        Text("Aucune séance terminée", style = MaterialTheme.typography.titleMedium, color = TextSecondary)
+                        Text("Aucune séance terminée", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             "Vos statistiques apparaîtront ici après votre première séance.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -257,7 +257,7 @@ private fun SectionTitle(title: String, icon: ImageVector) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(icon, null, tint = OrangeEnergy, modifier = Modifier.size(20.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
     }
 }
 
@@ -272,7 +272,7 @@ private fun BigStatCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -280,8 +280,8 @@ private fun BigStatCard(
         ) {
             Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
             Spacer(Modifier.height(8.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-            Text(label, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -291,14 +291,14 @@ private fun MiniStatCard(modifier: Modifier = Modifier, value: String, label: St
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = OrangeEnergy)
-            Text(label, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -311,8 +311,8 @@ private fun MuscleGroupRow(mg: MuscleGroupStats) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(mg.name, fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
-            Text("${mg.totalSets} séries · ${"%.0f".format(mg.percentage * 100)}%", fontSize = 12.sp, color = TextSecondary)
+            Text(mg.name, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+            Text("${mg.totalSets} séries · ${"%.0f".format(mg.percentage * 100)}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Box(
             modifier = Modifier
@@ -337,7 +337,7 @@ private fun ExerciseStatCard(ex: ExerciseStats, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -354,11 +354,11 @@ private fun ExerciseStatCard(ex: ExerciseStats, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(ex.exerciseName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(ex.exerciseName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
                 Text(
                     "${ex.totalSets} séries · ${ex.totalReps} reps",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(formatVolume(ex.totalVolume), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = OrangeEnergy)
@@ -371,7 +371,7 @@ private fun SessionCard(session: WorkoutSessionEntity, modifier: Modifier = Modi
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -389,15 +389,15 @@ private fun SessionCard(session: WorkoutSessionEntity, modifier: Modifier = Modi
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(session.routineName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(session.routineName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
                 Text(
                     "${session.startedAt.toFormattedDate()} · ${session.startedAt.toFormattedTime()}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (session.durationSeconds > 0) {
-                Text(session.durationSeconds.toDurationString(), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(session.durationSeconds.toDurationString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

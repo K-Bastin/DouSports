@@ -42,7 +42,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark),
+            .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -51,7 +51,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                 "Calendrier",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
 
@@ -78,7 +78,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                             .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Aucune séance ce jour", color = TextSecondary)
+                        Text("Aucune séance ce jour", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -87,7 +87,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = hiltViewModel()) {
                         "Séances du ${state.selectedDay} ${monthName(state.month)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 items(sessions) { session ->
@@ -117,7 +117,7 @@ internal fun CalendarCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Month navigation header
@@ -127,16 +127,16 @@ internal fun CalendarCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onPreviousMonth) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = "Mois précédent", tint = TextPrimary)
+                    Icon(Icons.Default.ChevronLeft, contentDescription = "Mois précédent", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Text(
                     "${monthName(month)} $year",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 IconButton(onClick = onNextMonth) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = "Mois suivant", tint = TextPrimary)
+                    Icon(Icons.Default.ChevronRight, contentDescription = "Mois suivant", tint = MaterialTheme.colorScheme.onBackground)
                 }
             }
 
@@ -151,7 +151,7 @@ internal fun CalendarCard(
                         textAlign = TextAlign.Center,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -203,11 +203,11 @@ internal fun CalendarCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(OrangeEnergy))
-                    Text("Séance", fontSize = 11.sp, color = TextSecondary)
+                    Text("Séance", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 val total = sessionsByDay.values.sumOf { it.size }
                 if (total > 0) {
-                    Text("$total séance${if (total > 1) "s" else ""} ce mois", fontSize = 11.sp, color = TextSecondary)
+                    Text("$total séance${if (total > 1) "s" else ""} ce mois", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -231,7 +231,7 @@ internal fun DayCell(
     val textColor = when {
         isSelected -> Color.White
         isToday    -> OrangeEnergy
-        else       -> TextPrimary
+        else       -> MaterialTheme.colorScheme.onBackground
     }
 
     Column(
@@ -284,7 +284,7 @@ internal fun SessionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
             Row(
@@ -298,7 +298,7 @@ internal fun SessionCard(
                     Text(
                         session.routineName.ifBlank { "Séance libre" },
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 15.sp
                     )
                     Spacer(Modifier.height(2.dp))
@@ -306,14 +306,14 @@ internal fun SessionCard(
                         Text(
                             timeFmt.format(Date(session.startedAt)),
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (session.durationSeconds > 0) {
-                            Text("•", fontSize = 12.sp, color = TextSecondary)
+                            Text("•", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 durationLabel(session.durationSeconds),
                                 fontSize = 12.sp,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -321,7 +321,7 @@ internal fun SessionCard(
                 Icon(
                     if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = TextSecondary
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -331,7 +331,7 @@ internal fun SessionCard(
                 exit = shrinkVertically()
             ) {
                 Column {
-                    HorizontalDivider(color = CardDarker)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     if (isLoadingSets) {
                         Box(
                             modifier = Modifier
@@ -345,7 +345,7 @@ internal fun SessionCard(
                         Text(
                             "Aucune série enregistrée",
                             modifier = Modifier.padding(16.dp),
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     } else {
@@ -371,9 +371,9 @@ internal fun SetsTable(sets: List<WorkoutSetEntity>) {
                 )
                 // Header
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("Série", Modifier.width(44.dp), fontSize = 11.sp, color = TextSecondary)
-                    Text("Reps", Modifier.width(44.dp), fontSize = 11.sp, color = TextSecondary)
-                    Text("Poids", fontSize = 11.sp, color = TextSecondary)
+                    Text("Série", Modifier.width(44.dp), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Reps", Modifier.width(44.dp), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Poids", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 exerciseSets.forEach { s ->
                     Row(modifier = Modifier.fillMaxWidth()) {
@@ -381,18 +381,18 @@ internal fun SetsTable(sets: List<WorkoutSetEntity>) {
                             "${s.setNumber}",
                             modifier = Modifier.width(44.dp),
                             fontSize = 13.sp,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "${s.reps}",
                             modifier = Modifier.width(44.dp),
                             fontSize = 13.sp,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             if (s.weight > 0) "%.1f kg".format(s.weight) else "—",
                             fontSize = 13.sp,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
