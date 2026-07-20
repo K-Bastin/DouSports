@@ -1,29 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-
-    <!-- Left weight plate -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M20,42 L30,42 L30,66 L20,66 Z" />
-    <!-- Left bar end -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M14,48 L20,48 L20,60 L14,60 Z" />
-    <!-- Bar -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M30,52 L78,52 L78,56 L30,56 Z" />
-    <!-- Right weight plate -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M78,42 L88,42 L88,66 L78,66 Z" />
-    <!-- Right bar end -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M88,48 L94,48 L94,60 L88,60 Z" />
-
-</vector>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/ic_launcher_logo"
+    android:gravity="center" />
