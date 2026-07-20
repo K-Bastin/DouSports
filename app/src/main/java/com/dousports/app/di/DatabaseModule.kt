@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.dousports.app.data.local.AppDatabase
 import com.dousports.app.data.local.dao.ExerciseDao
 import com.dousports.app.data.local.dao.ProfileDao
+import com.dousports.app.data.local.dao.ProgressPhotoDao
 import com.dousports.app.data.local.dao.RoutineDao
 import com.dousports.app.data.local.dao.WeeklyScheduleDao
 import com.dousports.app.data.local.dao.WorkoutDao
@@ -29,7 +30,8 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_3_4,
                 AppDatabase.MIGRATION_4_5,
                 AppDatabase.MIGRATION_5_6,
-                AppDatabase.MIGRATION_6_7
+                AppDatabase.MIGRATION_6_7,
+                AppDatabase.MIGRATION_7_8
             )
             .build()
 
@@ -47,4 +49,7 @@ object DatabaseModule {
 
     @Provides
     fun provideWeeklyScheduleDao(db: AppDatabase): WeeklyScheduleDao = db.weeklyScheduleDao()
+
+    @Provides
+    fun provideProgressPhotoDao(db: AppDatabase): ProgressPhotoDao = db.progressPhotoDao()
 }

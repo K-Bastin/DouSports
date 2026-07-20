@@ -13,8 +13,8 @@ android {
         applicationId = "com.dousports.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.1.7"
+        versionCode = 12
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.datastore.preferences)
+    implementation(libs.glance.appwidget)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

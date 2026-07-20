@@ -29,6 +29,17 @@ import com.dousports.app.utils.toFormattedTime
 
 private val Gold = Color(0xFFD29922)
 
+private val muscleGroupColors = listOf(
+    Color(0xFFFF6B35), // orange
+    Color(0xFF4ECDC4), // teal
+    Color(0xFF45B7D1), // blue
+    Color(0xFF96CEB4), // green
+    Color(0xFFFF99C8), // pink
+    Color(0xFFC3B1E1), // purple
+    Color(0xFFFFD93D), // yellow
+    Color(0xFFFF6B6B), // red
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
@@ -142,7 +153,7 @@ fun StatsScreen(
         if (uiState.muscleGroups.isNotEmpty()) {
             item { Spacer(Modifier.height(24.dp)) }
             item {
-                SectionTitle("Groupes musculaires", Icons.Default.AccessibilityNew)
+                SectionTitle("Volume par groupe musculaire (28j)", Icons.Default.AccessibilityNew)
             }
             item {
                 Card(
@@ -154,7 +165,8 @@ fun StatsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         uiState.muscleGroups.forEach { mg ->
-                            MuscleGroupRow(mg)
+                            val color = muscleGroupColors.getOrElse(mg.colorIndex) { OrangeEnergy }
+                            MuscleGroupRow(mg, color)
                         }
                     }
                 }
@@ -300,29 +312,41 @@ private fun MiniStatCard(modifier: Modifier = Modifier, value: String, label: St
 }
 
 @Composable
-private fun MuscleGroupRow(mg: MuscleGroupStats) {
+private fun MuscleGroupRow(mg: MuscleGroupStats, color: Color) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(mg.name, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
-            Text("${mg.totalSets} séries · ${"%.0f".format(mg.percentage * 100)}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+                Text(mg.name, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium)
+            }
+            Text(
+                "${formatVolume(mg.totalVolume)} · ${"%.0f".format(mg.percentage * 100)}%",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(OrangeEnergy.copy(alpha = 0.15f))
+                .background(color.copy(alpha = 0.15f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(mg.percentage)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(3.dp))
-                    .background(OrangeEnergy)
+                    .background(color)
             )
         }
     }
