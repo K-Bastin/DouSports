@@ -38,9 +38,16 @@ fun ActiveWorkoutScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
     var showFinishDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(routineId) {
         if (uiState.isLoading) viewModel.loadRoutine(routineId)
+    }
+
+    LaunchedEffect(uiState.prBeatenExerciseName) {
+        val name = uiState.prBeatenExerciseName ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar("Nouveau record sur $name !")
+        viewModel.clearPrBeaten()
     }
 
     BackHandler { showCancelDialog = true }
@@ -84,10 +91,15 @@ fun ActiveWorkoutScreen(
         return
     }
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { scaffoldPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .padding(scaffoldPadding)
     ) {
         // Top bar
         Row(
@@ -169,6 +181,7 @@ fun ActiveWorkoutScreen(
             )
         }
     }
+    } // end Scaffold
 }
 
 @Composable
@@ -207,6 +220,24 @@ private fun ExerciseWorkoutPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            val pr = exerciseState.personalRecord
+            if (pr != null && pr > 0f) {
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = OrangeEnergy,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Record : %.1f kg".format(pr),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OrangeEnergy
+                    )
+                }
+            }
         }
 
         // Logged sets

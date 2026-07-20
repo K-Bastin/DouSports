@@ -27,6 +27,7 @@ import coil.decode.GifDecoder
 import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.data.repository.ExerciseRepository
+import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.gifUrl
 import java.io.File
@@ -42,12 +43,14 @@ import javax.inject.Inject
 
 data class ExerciseDetailUiState(
     val exercise: ExerciseEntity? = null,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val personalRecord: Float? = null
 )
 
 @HiltViewModel
 class ExerciseDetailViewModel @Inject constructor(
-    private val repository: ExerciseRepository
+    private val repository: ExerciseRepository,
+    private val workoutRepository: WorkoutRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ExerciseDetailUiState())
     val uiState = _uiState.asStateFlow()
@@ -57,6 +60,10 @@ class ExerciseDetailViewModel @Inject constructor(
             repository.getExerciseByIdFlow(id).collect { ex ->
                 _uiState.update { it.copy(exercise = ex) }
             }
+        }
+        viewModelScope.launch {
+            val pr = workoutRepository.maxWeightForExercise(id)
+            _uiState.update { it.copy(personalRecord = pr) }
         }
     }
 
@@ -79,6 +86,7 @@ fun ExerciseDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val exercise = uiState.exercise
+    val personalRecord = uiState.personalRecord
     val context = LocalContext.current
 
     LaunchedEffect(exerciseId) { viewModel.load(exerciseId) }
@@ -231,6 +239,25 @@ fun ExerciseDetailScreen(
                             if (ex.equipment.isNotBlank()) InfoChip(label = ex.equipment.toFrEquipment())
                             if (ex.muscleGroup.isNotBlank()) InfoChip(label = ex.muscleGroup.toFrMuscle())
                             if (ex.isCustom) InfoChip(label = "Perso")
+                        }
+
+                        if (personalRecord != null && personalRecord > 0f) {
+                            Spacer(Modifier.height(10.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.EmojiEvents,
+                                    contentDescription = "Record personnel",
+                                    tint = OrangeEnergy,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Record : %.1f kg".format(personalRecord),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = OrangeEnergy,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
 
                         Spacer(Modifier.height(16.dp))
