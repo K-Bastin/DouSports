@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,7 @@ import java.util.*
 @Composable
 fun ProfileScreen(
     onNavigateToStats: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
     calendarViewModel: CalendarViewModel = hiltViewModel(),
     themeViewModel: ThemeViewModel = hiltViewModel()
@@ -96,6 +98,15 @@ fun ProfileScreen(
                                 contentDescription = if (isDarkTheme) "Mode clair" else "Mode sombre",
                                 tint = OrangeEnergy
                             )
+                        }
+                        OutlinedButton(
+                            onClick = onNavigateToHistory,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy)
+                        ) {
+                            Icon(Icons.Default.History, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Historique")
                         }
                         OutlinedButton(
                             onClick = onNavigateToStats,
