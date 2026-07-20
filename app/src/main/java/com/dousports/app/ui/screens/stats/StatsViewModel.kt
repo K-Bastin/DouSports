@@ -7,6 +7,7 @@ import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.utils.startOfMonthMillis
 import com.dousports.app.utils.startOfWeekMillis
+import com.dousports.app.utils.toFrBodyPart
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -18,6 +19,19 @@ data class PersonalRecord(
     val maxWeight: Float
 )
 
+data class ExerciseStats(
+    val exerciseName: String,
+    val totalSets: Int,
+    val totalReps: Int,
+    val totalVolume: Float
+)
+
+data class MuscleGroupStats(
+    val name: String,
+    val totalSets: Int,
+    val percentage: Float
+)
+
 data class StatsUiState(
     val weeklyCount: Int = 0,
     val monthlyCount: Int = 0,
@@ -26,6 +40,9 @@ data class StatsUiState(
     val totalSessions: Int = 0,
     val personalRecords: List<PersonalRecord> = emptyList(),
     val recentSessions: List<WorkoutSessionEntity> = emptyList(),
+    val topExercises: List<ExerciseStats> = emptyList(),
+    val muscleGroups: List<MuscleGroupStats> = emptyList(),
+    val totalSetsAllTime: Int = 0,
     val isLoading: Boolean = true
 )
 
@@ -61,6 +78,41 @@ class StatsViewModel @Inject constructor(
                     PersonalRecord(id, name, maxWeight)
                 }.sortedByDescending { it.maxWeight }.take(10)
 
+                val allSets = workoutRepository.getAllSets()
+                val totalSetsAllTime = allSets.size
+
+                val topExercises = allSets
+                    .groupBy { it.exerciseName }
+                    .map { (name, sets) ->
+                        ExerciseStats(
+                            exerciseName = name,
+                            totalSets = sets.size,
+                            totalReps = sets.sumOf { it.reps },
+                            totalVolume = sets.sumOf { (it.reps * it.weight).toDouble() }.toFloat()
+                        )
+                    }
+                    .sortedByDescending { it.totalSets }
+                    .take(8)
+
+                val exerciseMap = exerciseRepository
+                    .getExercisesByIds(allSets.map { it.exerciseId }.distinct())
+                    .associateBy { it.id }
+
+                val muscleGroups = allSets
+                    .groupBy { exerciseMap[it.exerciseId]?.bodyPart ?: "other" }
+                    .map { (bodyPart, sets) -> bodyPart to sets.size }
+                    .sortedByDescending { it.second }
+                    .let { list ->
+                        val total = list.sumOf { it.second }.coerceAtLeast(1)
+                        list.map { (bodyPart, count) ->
+                            MuscleGroupStats(
+                                name = bodyPart.toFrBodyPart(),
+                                totalSets = count,
+                                percentage = count.toFloat() / total
+                            )
+                        }
+                    }
+
                 _uiState.update {
                     it.copy(
                         weeklyCount = weeklyCount,
@@ -70,6 +122,9 @@ class StatsViewModel @Inject constructor(
                         totalSessions = sessions.count { s -> s.finishedAt != null },
                         personalRecords = records,
                         recentSessions = sessions.take(20),
+                        topExercises = topExercises,
+                        muscleGroups = muscleGroups,
+                        totalSetsAllTime = totalSetsAllTime,
                         isLoading = false
                     )
                 }

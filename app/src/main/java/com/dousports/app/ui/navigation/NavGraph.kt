@@ -204,11 +204,11 @@ fun DouSportsNavGraph() {
             }
 
             composable(Screen.Stats.route) {
-                StatsScreen()
+                StatsScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(onNavigateToStats = { navController.navigate(Screen.Stats.route) })
             }
         }
     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +36,7 @@ import java.util.*
 
 @Composable
 fun ProfileScreen(
+    onNavigateToStats: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
     calendarViewModel: CalendarViewModel = hiltViewModel()
 ) {
@@ -71,12 +73,27 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text(
-                    "Mon Profil",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Mon Profil",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    OutlinedButton(
+                        onClick = onNavigateToStats,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy)
+                    ) {
+                        Icon(Icons.Default.BarChart, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Stats")
+                    }
+                }
             }
 
             item { CurrentStatsCard(state) }
