@@ -74,24 +74,24 @@ fun ProfileScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(NavyDark)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "Mon Profil",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Mon Profil",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
                         IconButton(onClick = { themeViewModel.toggleTheme() }) {
                             Icon(
                                 if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
@@ -99,6 +99,8 @@ fun ProfileScreen(
                                 tint = OrangeEnergy
                             )
                         }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = onNavigateToHistory,
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
@@ -132,7 +134,7 @@ fun ProfileScreen(
                     "Calendrier d'entraînement",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -156,7 +158,7 @@ fun ProfileScreen(
                             "Séances du ${calState.selectedDay} ${monthName(calState.month)}",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                     items(sessions) { session ->
@@ -176,7 +178,7 @@ fun ProfileScreen(
                                 .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Aucune séance ce jour", color = TextSecondary)
+                            Text("Aucune séance ce jour", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -188,7 +190,7 @@ fun ProfileScreen(
                         "Historique",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 items(state.measurements) { m ->
@@ -203,9 +205,9 @@ fun ProfileScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Aucune mesure enregistrée", color = TextSecondary)
+                            Text("Aucune mesure enregistrée", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(8.dp))
-                            Text("Appuie sur + pour commencer", color = TextSecondary, fontSize = 13.sp)
+                            Text("Appuie sur + pour commencer", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                         }
                     }
                 }
@@ -229,7 +231,7 @@ private fun CurrentStatsCard(state: ProfileUiState) {
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Aucune donnée", color = TextSecondary)
+                Text("Aucune donnée", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             return@Card
         }
@@ -256,7 +258,7 @@ private fun VerticalDivider() {
         modifier = Modifier
             .width(1.dp)
             .height(56.dp)
-            .background(CardDarker)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     )
 }
 
@@ -265,7 +267,7 @@ private fun StatColumn(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = color)
         Spacer(Modifier.height(4.dp))
-        Text(label, fontSize = 12.sp, color = TextSecondary)
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -294,12 +296,12 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                     "Évolution du poids",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     "${history.size} mesures",
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -370,17 +372,17 @@ private fun WeightChartCard(history: List<Pair<Long, Float>>) {
                 Text(
                     dateFmt.format(Date(timestamps.first())),
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     "min %.1f  max %.1f kg".format(minW, maxW),
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     dateFmt.format(Date(timestamps.last())),
                     fontSize = 11.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -405,14 +407,14 @@ private fun MeasurementRow(m: BodyMeasurementEntity, onDelete: () -> Unit) {
                 Text(
                     fmt.format(Date(m.recordedAt)),
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "%.1f kg  •  %.0f cm".format(m.weightKg, m.heightCm),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
             IconButton(onClick = onDelete) {
