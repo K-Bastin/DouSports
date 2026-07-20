@@ -19,7 +19,7 @@ import com.dousports.app.data.local.entity.*
         WorkoutSetEntity::class,
         BodyMeasurementEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -48,6 +48,12 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL(
                     "ALTER TABLE exercises ADD COLUMN isCustom INTEGER NOT NULL DEFAULT 0"
                 )
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DELETE FROM exercises WHERE isCustom = 0")
             }
         }
     }

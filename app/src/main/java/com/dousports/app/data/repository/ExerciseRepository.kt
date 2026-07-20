@@ -27,6 +27,8 @@ class ExerciseRepository @Inject constructor(
 
     suspend fun count(): Int = exerciseDao.count()
 
+    suspend fun countBuiltIn(): Int = exerciseDao.countBuiltIn()
+
     suspend fun insertAll(exercises: List<ExerciseEntity>) = exerciseDao.insertAll(exercises)
 
     suspend fun insertExercise(exercise: ExerciseEntity) = exerciseDao.insertExercise(exercise)
