@@ -1,5 +1,9 @@
 package com.dousports.app.ui.screens.workout
 
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -38,9 +43,30 @@ fun ActiveWorkoutScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showCancelDialog by remember { mutableStateOf(false) }
     var showFinishDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(routineId) {
         if (uiState.isLoading) viewModel.loadRoutine(routineId)
+    }
+
+    LaunchedEffect(uiState.prBeatenExerciseName) {
+        val name = uiState.prBeatenExerciseName ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar("Nouveau record sur $name !")
+        viewModel.clearPrBeaten()
+    }
+
+    LaunchedEffect(uiState.restTimerFinished) {
+        if (uiState.restTimerFinished) {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (context.getSystemService(VibratorManager::class.java))?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Vibrator::class.java)
+            }
+            vibrator?.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+            viewModel.clearRestTimerFinished()
+        }
     }
 
     BackHandler { showCancelDialog = true }
@@ -84,10 +110,15 @@ fun ActiveWorkoutScreen(
         return
     }
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { scaffoldPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .padding(scaffoldPadding)
     ) {
         // Top bar
         Row(
@@ -123,6 +154,16 @@ fun ActiveWorkoutScreen(
         }
 
         HorizontalDivider()
+
+        // Rest timer
+        val restRemaining = uiState.restTimerRemaining
+        if (restRemaining != null) {
+            RestTimerBar(
+                remaining = restRemaining,
+                total = uiState.restTimerTotalSeconds,
+                onSkip = viewModel::skipRestTimer
+            )
+        }
 
         // Exercise tabs
         if (uiState.exercises.isNotEmpty()) {
@@ -169,6 +210,53 @@ fun ActiveWorkoutScreen(
             )
         }
     }
+    } // end Scaffold
+}
+
+@Composable
+private fun RestTimerBar(
+    remaining: Int,
+    total: Int,
+    onSkip: () -> Unit
+) {
+    val progress = if (total > 0) remaining.toFloat() / total.toFloat() else 0f
+    val minutes = remaining / 60
+    val seconds = remaining % 60
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Repos : %d:%02d".format(minutes, seconds),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = OrangeEnergy
+                )
+                TextButton(onClick = onSkip) {
+                    Text("Ignorer", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = OrangeEnergy,
+                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            )
+        }
+    }
 }
 
 @Composable
@@ -207,6 +295,24 @@ private fun ExerciseWorkoutPanel(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            val pr = exerciseState.personalRecord
+            if (pr != null && pr > 0f) {
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = OrangeEnergy,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Record : %.1f kg".format(pr),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OrangeEnergy
+                    )
+                }
+            }
         }
 
         // Logged sets

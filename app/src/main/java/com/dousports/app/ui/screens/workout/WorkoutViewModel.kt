@@ -22,7 +22,8 @@ data class LoggedSet(
 data class ExerciseWorkoutState(
     val routineExercise: RoutineExerciseEntity,
     val loggedSets: List<LoggedSet> = emptyList(),
-    val previousSets: List<WorkoutSetEntity> = emptyList()
+    val previousSets: List<WorkoutSetEntity> = emptyList(),
+    val personalRecord: Float? = null
 )
 
 data class ActiveWorkoutUiState(
@@ -34,7 +35,11 @@ data class ActiveWorkoutUiState(
     val sessionId: Long? = null,
     val sessionStartedAt: Long = 0L,
     val isLoading: Boolean = true,
-    val isFinished: Boolean = false
+    val isFinished: Boolean = false,
+    val prBeatenExerciseName: String? = null,
+    val restTimerTotalSeconds: Int = 90,
+    val restTimerRemaining: Int? = null,
+    val restTimerFinished: Boolean = false
 )
 
 @HiltViewModel
@@ -46,6 +51,7 @@ class WorkoutViewModel @Inject constructor(
     val uiState: StateFlow<ActiveWorkoutUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var restTimerJob: Job? = null
 
     fun loadRoutine(routineId: Long) {
         viewModelScope.launch {
@@ -63,7 +69,8 @@ class WorkoutViewModel @Inject constructor(
 
             val exerciseStates = routineExercises.map { re ->
                 val prev = repository.getRecentSetsForExercise(re.exerciseId, 10)
-                ExerciseWorkoutState(routineExercise = re, previousSets = prev)
+                val pr = repository.maxWeightForExercise(re.exerciseId)
+                ExerciseWorkoutState(routineExercise = re, previousSets = prev, personalRecord = pr)
             }
 
             _uiState.update {
@@ -98,11 +105,16 @@ class WorkoutViewModel @Inject constructor(
         val current = _uiState.value.exercises[exerciseIndex]
         val setNumber = current.loggedSets.size + 1
         val newSet = LoggedSet(setNumber, reps, weight)
+        val prBeaten = weight > 0f && (current.personalRecord == null || weight > current.personalRecord)
 
         _uiState.update {
             val updated = it.exercises.toMutableList()
-            updated[exerciseIndex] = current.copy(loggedSets = current.loggedSets + newSet)
-            it.copy(exercises = updated)
+            val newPr = if (prBeaten) weight else current.personalRecord
+            updated[exerciseIndex] = current.copy(loggedSets = current.loggedSets + newSet, personalRecord = newPr)
+            it.copy(
+                exercises = updated,
+                prBeatenExerciseName = if (prBeaten) current.routineExercise.exerciseName else it.prBeatenExerciseName
+            )
         }
 
         // Persist to database
@@ -120,6 +132,36 @@ class WorkoutViewModel @Inject constructor(
                 )
             )
         }
+
+        // Start rest timer
+        startRestTimer(current.routineExercise.restSeconds.takeIf { it > 0 } ?: _uiState.value.restTimerTotalSeconds)
+    }
+
+    private fun startRestTimer(durationSeconds: Int) {
+        restTimerJob?.cancel()
+        _uiState.update { it.copy(restTimerTotalSeconds = durationSeconds, restTimerRemaining = durationSeconds, restTimerFinished = false) }
+        restTimerJob = viewModelScope.launch {
+            var remaining = durationSeconds
+            while (remaining > 0) {
+                delay(1000)
+                remaining--
+                _uiState.update { it.copy(restTimerRemaining = remaining) }
+            }
+            _uiState.update { it.copy(restTimerRemaining = null, restTimerFinished = true) }
+        }
+    }
+
+    fun skipRestTimer() {
+        restTimerJob?.cancel()
+        _uiState.update { it.copy(restTimerRemaining = null, restTimerFinished = false) }
+    }
+
+    fun clearRestTimerFinished() {
+        _uiState.update { it.copy(restTimerFinished = false) }
+    }
+
+    fun clearPrBeaten() {
+        _uiState.update { it.copy(prBeatenExerciseName = null) }
     }
 
     fun removeLastSet(exerciseIndex: Int) {
@@ -177,5 +219,6 @@ class WorkoutViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         timerJob?.cancel()
+        restTimerJob?.cancel()
     }
 }

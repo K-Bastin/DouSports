@@ -24,6 +24,7 @@ fun RoutinesScreen(
     onCreateRoutine: () -> Unit,
     onEditRoutine: (Long) -> Unit,
     onStartRoutine: (Long) -> Unit,
+    onNavigateToSchedule: () -> Unit = {},
     viewModel: RoutinesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -46,12 +47,29 @@ fun RoutinesScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Text(
-                "Mes Routines",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Mes Routines",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                OutlinedButton(
+                    onClick = onNavigateToSchedule,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Planning")
+                }
+            }
 
             if (uiState.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -69,7 +87,8 @@ fun RoutinesScreen(
                             routine = routine,
                             onStart = { onStartRoutine(routine.id) },
                             onEdit = { onEditRoutine(routine.id) },
-                            onDelete = { deleteTarget = routine }
+                            onDelete = { deleteTarget = routine },
+                            onDuplicate = { viewModel.duplicateRoutine(routine.id) }
                         )
                     }
                     item { Spacer(Modifier.height(72.dp)) }
@@ -103,7 +122,8 @@ private fun RoutineListCard(
     routine: RoutineEntity,
     onStart: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onDuplicate: () -> Unit = {}
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -164,6 +184,11 @@ private fun RoutineListCard(
                         text = { Text("Modifier") },
                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                         onClick = { menuExpanded = false; onEdit() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Dupliquer") },
+                        leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
+                        onClick = { menuExpanded = false; onDuplicate() }
                     )
                     DropdownMenuItem(
                         text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },

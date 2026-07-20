@@ -3,6 +3,7 @@ package com.dousports.app.data.repository
 import com.dousports.app.data.local.dao.RoutineDao
 import com.dousports.app.data.local.dao.WorkoutDao
 import com.dousports.app.data.local.entity.*
+import com.dousports.app.data.local.entity.ExerciseProgressPoint
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,6 +33,20 @@ class WorkoutRepository @Inject constructor(
     suspend fun saveRoutineExercises(routineId: Long, items: List<RoutineExerciseEntity>) {
         routineDao.clearRoutineExercises(routineId)
         routineDao.insertRoutineExercises(items)
+    }
+
+    suspend fun duplicateRoutine(routineId: Long) {
+        val original = routineDao.getRoutineById(routineId) ?: return
+        val newRoutine = original.copy(
+            id = 0,
+            name = "${original.name} (copie)",
+            createdAt = System.currentTimeMillis(),
+            lastPerformedAt = null
+        )
+        val newRoutineId = routineDao.insertRoutine(newRoutine)
+        val exercises = routineDao.getExercisesForRoutineSync(routineId)
+        val newExercises = exercises.map { it.copy(id = 0, routineId = newRoutineId) }
+        routineDao.insertRoutineExercises(newExercises)
     }
 
     suspend fun deleteRoutineExercise(re: RoutineExerciseEntity) =
@@ -80,4 +95,7 @@ class WorkoutRepository @Inject constructor(
         workoutDao.getSetsForSessionSync(sessionId)
 
     suspend fun getAllSets(): List<WorkoutSetEntity> = workoutDao.getAllSets()
+
+    suspend fun getProgressionForExercise(exerciseId: String, limit: Int = 20): List<ExerciseProgressPoint> =
+        workoutDao.getProgressionForExercise(exerciseId, limit)
 }
