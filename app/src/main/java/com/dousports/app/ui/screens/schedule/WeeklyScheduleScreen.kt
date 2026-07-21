@@ -24,6 +24,7 @@ import com.dousports.app.data.local.entity.WeeklyScheduleEntity
 import com.dousports.app.data.repository.WeeklyScheduleRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.ui.theme.OrangeEnergy
+import androidx.glance.appwidget.updateAll
 import com.dousports.app.widget.TodayRoutineWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
