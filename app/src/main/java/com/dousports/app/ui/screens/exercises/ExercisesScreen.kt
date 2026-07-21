@@ -30,6 +30,7 @@ import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.imageUrl
 import com.dousports.app.utils.toFrBodyPart
+import com.dousports.app.utils.toFrEquipment
 import java.io.File
 
 @Composable
@@ -82,7 +83,7 @@ fun ExercisesScreen(
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 4.dp)
             ) {
                 item {
                     FilterChip(
@@ -103,6 +104,38 @@ fun ExercisesScreen(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = OrangeEnergy,
                             selectedLabelColor = androidx.compose.ui.graphics.Color.White
+                        )
+                    )
+                }
+            }
+        }
+
+        // Equipment filter chips
+        if (uiState.equipmentList.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = uiState.selectedEquipment == null,
+                        onClick = { viewModel.onEquipmentSelected(null) },
+                        label = { Text("Tout équip.") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+                        )
+                    )
+                }
+                items(uiState.equipmentList) { equip ->
+                    FilterChip(
+                        selected = uiState.selectedEquipment == equip,
+                        onClick = { viewModel.onEquipmentSelected(if (uiState.selectedEquipment == equip) null else equip) },
+                        label = { Text(equip.toFrEquipment()) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondary
                         )
                     )
                 }

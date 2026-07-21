@@ -29,6 +29,18 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE equipment = :equipment ORDER BY name ASC")
     fun getExercisesByEquipment(equipment: String): Flow<List<ExerciseEntity>>
 
+    @Query("""
+        SELECT * FROM exercises
+        WHERE (:bodyPart IS NULL OR bodyPart = :bodyPart)
+          AND (:equipment IS NULL OR equipment = :equipment)
+          AND (:query = '' OR name LIKE '%' || :query || '%'
+               OR bodyPart LIKE '%' || :query || '%'
+               OR equipment LIKE '%' || :query || '%'
+               OR muscleGroup LIKE '%' || :query || '%')
+        ORDER BY name ASC
+    """)
+    fun filterExercises(query: String, bodyPart: String?, equipment: String?): Flow<List<ExerciseEntity>>
+
     @Query("SELECT DISTINCT bodyPart FROM exercises ORDER BY bodyPart ASC")
     suspend fun getAllBodyParts(): List<String>
 

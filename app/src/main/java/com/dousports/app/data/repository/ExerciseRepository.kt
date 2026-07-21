@@ -37,6 +37,9 @@ class ExerciseRepository @Inject constructor(
 
     suspend fun deleteExercise(exercise: ExerciseEntity) = exerciseDao.deleteExercise(exercise)
 
+    fun filterExercises(query: String, bodyPart: String?, equipment: String?): Flow<List<ExerciseEntity>> =
+        exerciseDao.filterExercises(query, bodyPart, equipment)
+
     fun getExerciseByIdFlow(id: String) = exerciseDao.getExerciseByIdFlow(id)
 
     suspend fun getAllTargets(): List<String> = exerciseDao.getAllTargets()
