@@ -1,15 +1,18 @@
 package com.dousports.app.ui.screens.workout
 
+import android.graphics.Paint
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,7 +26,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +42,7 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
+import com.dousports.app.data.local.entity.ExerciseProgressPoint
 import com.dousports.app.ui.theme.GreenSuccess
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.gifUrl
@@ -43,6 +50,9 @@ import com.dousports.app.utils.stepsAsList
 import com.dousports.app.utils.toDurationString
 import com.dousports.app.utils.toFrBodyPart
 import com.dousports.app.utils.toFrEquipment
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ActiveWorkoutScreen(
@@ -172,7 +182,8 @@ fun ActiveWorkoutScreen(
             RestTimerBar(
                 remaining = restRemaining,
                 total = uiState.restTimerTotalSeconds,
-                onSkip = viewModel::skipRestTimer
+                onSkip = viewModel::skipRestTimer,
+                onChangeDuration = viewModel::setDefaultRestDuration
             )
         }
 
@@ -217,18 +228,37 @@ fun ActiveWorkoutScreen(
                 },
                 onRemoveLastSet = {
                     viewModel.removeLastSet(uiState.currentExerciseIndex)
+                },
+                onShowProgress = {
+                    viewModel.loadExerciseProgress(
+                        currentEx.routineExercise.exerciseId,
+                        currentEx.routineExercise.exerciseName
+                    )
                 }
             )
         }
     }
+
+    // Exercise progress bottom sheet
+    val progressName = uiState.progressExerciseName
+    if (progressName != null) {
+        ExerciseProgressSheet(
+            exerciseName = progressName,
+            points = uiState.progressPoints,
+            onDismiss = viewModel::clearExerciseProgress
+        )
+    }
     } // end Scaffold
 }
+
+private val REST_PRESETS = listOf(30 to "30s", 60 to "1min", 90 to "1:30", 120 to "2min", 180 to "3min")
 
 @Composable
 private fun RestTimerBar(
     remaining: Int,
     total: Int,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onChangeDuration: (Int) -> Unit
 ) {
     val progress = if (total > 0) remaining.toFloat() / total.toFloat() else 0f
     val minutes = remaining / 60
@@ -266,6 +296,20 @@ private fun RestTimerBar(
                 color = OrangeEnergy,
                 trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
             )
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(REST_PRESETS) { (secs, label) ->
+                    FilterChip(
+                        selected = total == secs,
+                        onClick = { onChangeDuration(secs) },
+                        label = { Text(label, fontSize = 11.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = OrangeEnergy,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+            }
         }
     }
 }
@@ -276,7 +320,8 @@ private fun ExerciseWorkoutPanel(
     exerciseState: ExerciseWorkoutState,
     exerciseIndex: Int,
     onLogSet: (Int, Float) -> Unit,
-    onRemoveLastSet: () -> Unit
+    onRemoveLastSet: () -> Unit,
+    onShowProgress: () -> Unit = {}
 ) {
     var repsInput by remember(exerciseIndex) {
         mutableStateOf(exerciseState.routineExercise.targetReps.toString())
@@ -339,13 +384,22 @@ private fun ExerciseWorkoutPanel(
                         }
                     }
                 }
-                if (exerciseState.exercise != null) {
-                    IconButton(onClick = { showInfoSheet = true }) {
+                Row {
+                    IconButton(onClick = onShowProgress) {
                         Icon(
-                            Icons.Default.Info,
-                            contentDescription = "Voir l'exercice",
+                            Icons.Default.ShowChart,
+                            contentDescription = "Progression",
                             tint = OrangeEnergy
                         )
+                    }
+                    if (exerciseState.exercise != null) {
+                        IconButton(onClick = { showInfoSheet = true }) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "Voir l'exercice",
+                                tint = OrangeEnergy
+                            )
+                        }
                     }
                 }
             }
@@ -520,6 +574,149 @@ private fun WorkoutNumberField(
             cursorColor = OrangeEnergy
         )
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExerciseProgressSheet(
+    exerciseName: String,
+    points: List<ExerciseProgressPoint>,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val dateFmt = remember { SimpleDateFormat("d MMM", Locale.FRENCH) }
+    val onBackground = MaterialTheme.colorScheme.onBackground
+    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 40.dp)
+        ) {
+            Text(
+                exerciseName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Progression du poids max",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+
+            if (points.size < 2) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Pas encore assez de données.\nEffectue au moins 2 séances avec cet exercice.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                val minW = points.minOf { it.maxWeight }
+                val maxW = points.maxOf { it.maxWeight }
+                val wRange = (maxW - minW).coerceAtLeast(1f)
+
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(surfaceVariant)
+                ) {
+                    val padL = 56f
+                    val padR = 16f
+                    val padT = 20f
+                    val padB = 36f
+                    val chartW = size.width - padL - padR
+                    val chartH = size.height - padT - padB
+                    val n = points.size
+
+                    val coords = points.mapIndexed { i, p ->
+                        val x = padL + i.toFloat() / (n - 1) * chartW
+                        val y = padT + chartH - ((p.maxWeight - minW) / wRange) * chartH
+                        Offset(x, y)
+                    }
+
+                    // Grid lines (3 horizontal)
+                    for (k in 0..2) {
+                        val y = padT + k * chartH / 2
+                        drawLine(
+                            color = onBackground.copy(alpha = 0.08f),
+                            start = Offset(padL, y),
+                            end = Offset(size.width - padR, y),
+                            strokeWidth = 1f
+                        )
+                    }
+
+                    // Line
+                    for (i in 1 until coords.size) {
+                        drawLine(
+                            color = OrangeEnergy,
+                            start = coords[i - 1],
+                            end = coords[i],
+                            strokeWidth = 3f
+                        )
+                    }
+
+                    // Dots
+                    coords.forEach { offset ->
+                        drawCircle(color = OrangeEnergy, radius = 5f, center = offset)
+                        drawCircle(color = Color.White, radius = 2.5f, center = offset)
+                    }
+
+                    // Y axis labels
+                    val paint = Paint().apply {
+                        color = onBackground.copy(alpha = 0.6f).toArgb()
+                        textSize = 28f
+                        textAlign = Paint.Align.RIGHT
+                    }
+                    val yLabels = listOf(minW, (minW + maxW) / 2, maxW)
+                    yLabels.forEachIndexed { i, w ->
+                        val y = (padT + chartH - i * chartH / 2 + 10f).coerceIn(padT, size.height - padB + 10f)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            "%.1f".format(w),
+                            padL - 6f,
+                            y,
+                            paint
+                        )
+                    }
+
+                    // X axis date labels (first & last)
+                    val xPaint = Paint().apply {
+                        color = onBackground.copy(alpha = 0.6f).toArgb()
+                        textSize = 26f
+                        textAlign = Paint.Align.CENTER
+                    }
+                    val labelIndices = if (n <= 5) points.indices.toList()
+                    else listOf(0, n / 2, n - 1)
+                    labelIndices.forEach { i ->
+                        val x = padL + i.toFloat() / (n - 1) * chartW
+                        drawContext.canvas.nativeCanvas.drawText(
+                            dateFmt.format(Date(points[i].sessionTime)),
+                            x,
+                            size.height - 4f,
+                            xPaint
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

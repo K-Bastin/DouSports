@@ -3,9 +3,11 @@ package com.dousports.app.ui.screens.workout
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dousports.app.data.local.entity.ExerciseEntity
+import com.dousports.app.data.local.entity.ExerciseProgressPoint
 import com.dousports.app.data.local.entity.RoutineExerciseEntity
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
 import com.dousports.app.data.local.entity.WorkoutSetEntity
+import com.dousports.app.data.preferences.WorkoutPreferenceManager
 import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,13 +45,16 @@ data class ActiveWorkoutUiState(
     val prBeatenExerciseName: String? = null,
     val restTimerTotalSeconds: Int = 90,
     val restTimerRemaining: Int? = null,
-    val restTimerFinished: Boolean = false
+    val restTimerFinished: Boolean = false,
+    val progressPoints: List<ExerciseProgressPoint> = emptyList(),
+    val progressExerciseName: String? = null
 )
 
 @HiltViewModel
 class WorkoutViewModel @Inject constructor(
     private val repository: WorkoutRepository,
-    private val exerciseRepository: ExerciseRepository
+    private val exerciseRepository: ExerciseRepository,
+    private val prefs: WorkoutPreferenceManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ActiveWorkoutUiState())
@@ -57,6 +62,14 @@ class WorkoutViewModel @Inject constructor(
 
     private var timerJob: Job? = null
     private var restTimerJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            prefs.defaultRestDuration.first().let { savedDuration ->
+                _uiState.update { it.copy(restTimerTotalSeconds = savedDuration) }
+            }
+        }
+    }
 
     fun loadRoutine(routineId: Long) {
         viewModelScope.launch {
@@ -170,6 +183,22 @@ class WorkoutViewModel @Inject constructor(
 
     fun clearPrBeaten() {
         _uiState.update { it.copy(prBeatenExerciseName = null) }
+    }
+
+    fun setDefaultRestDuration(seconds: Int) {
+        _uiState.update { it.copy(restTimerTotalSeconds = seconds) }
+        viewModelScope.launch { prefs.setDefaultRestDuration(seconds) }
+    }
+
+    fun loadExerciseProgress(exerciseId: String, exerciseName: String) {
+        viewModelScope.launch {
+            val points = repository.getProgressionForExercise(exerciseId, 20)
+            _uiState.update { it.copy(progressPoints = points, progressExerciseName = exerciseName) }
+        }
+    }
+
+    fun clearExerciseProgress() {
+        _uiState.update { it.copy(progressPoints = emptyList(), progressExerciseName = null) }
     }
 
     fun removeLastSet(exerciseIndex: Int) {

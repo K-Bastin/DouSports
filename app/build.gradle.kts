@@ -100,6 +100,7 @@ dependencies {
     implementation(libs.coil.gif)
     implementation(libs.datastore.preferences)
     implementation(libs.glance.appwidget)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
