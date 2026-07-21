@@ -1,7 +1,6 @@
 package com.dousports.app.widget
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -20,7 +19,6 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.dousports.app.MainActivity
 import com.dousports.app.data.local.entity.WeeklyScheduleEntity
-import com.dousports.app.data.repository.WeeklyScheduleRepository
 import dagger.hilt.android.EntryPointAccessors
 import java.util.Calendar
 
@@ -30,7 +28,7 @@ class TodayRoutineWidget : GlanceAppWidget() {
         val schedule = getTodaySchedule(context)
         provideContent {
             GlanceTheme {
-                WidgetContent(context = context, schedule = schedule)
+                WidgetContent(schedule = schedule)
             }
         }
     }
@@ -45,16 +43,14 @@ class TodayRoutineWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun WidgetContent(context: Context, schedule: WeeklyScheduleEntity?) {
-    val launchIntent = Intent(context, MainActivity::class.java).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-    }
+private fun WidgetContent(schedule: WeeklyScheduleEntity?) {
+    val launchAction = actionStartActivity(MainActivity::class.java)
 
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(Color(0xFF1A1A1A))
-            .clickable(actionStartActivity(launchIntent)),
+            .clickable(launchAction),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -86,7 +82,7 @@ private fun WidgetContent(context: Context, schedule: WeeklyScheduleEntity?) {
                     modifier = GlanceModifier
                         .background(Color(0xFFFF8C00))
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable(actionStartActivity(launchIntent)),
+                        .clickable(launchAction),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
