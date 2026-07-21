@@ -1,5 +1,7 @@
 package com.dousports.app.ui.screens.update
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -20,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -37,10 +40,20 @@ fun UpdateScreen(
     viewModel: UpdateCheckViewModel,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val updateInfo by viewModel.updateInfo.collectAsState()
     val downloadState by viewModel.downloadState.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
     val needInstallPermission by viewModel.needInstallPermission.collectAsState()
+
+    val onUninstall: () -> Unit = {
+        @Suppress("DEPRECATION")
+        val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
 
     if (needInstallPermission) {
         AlertDialog(
@@ -108,11 +121,11 @@ fun UpdateScreen(
                         DownloadedCard(
                             onInstall = { viewModel.install() }
                         )
-                        ConflictHelpCard(onUninstall = { viewModel.openUninstall() })
+                        ConflictHelpCard(onUninstall = onUninstall)
                     }
                     DownloadState.ERROR -> {
                         ErrorCard(onRetry = { viewModel.retryDownload() })
-                        ConflictHelpCard(onUninstall = { viewModel.openUninstall() })
+                        ConflictHelpCard(onUninstall = onUninstall)
                     }
                 }
             }

@@ -63,7 +63,8 @@ class UpdateInstaller @Inject constructor(
     }
 
     fun openUninstall() {
-        val intent = Intent(Intent.ACTION_DELETE).apply {
+        @Suppress("DEPRECATION")
+        val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
             data = Uri.parse("package:${context.packageName}")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
