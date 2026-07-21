@@ -183,7 +183,7 @@ fun ActiveWorkoutScreen(
                 remaining = restRemaining,
                 total = uiState.restTimerTotalSeconds,
                 onSkip = viewModel::skipRestTimer,
-                onChangeDuration = viewModel::setDefaultRestDuration
+                onChangeDuration = viewModel::changeRestDuration
             )
         }
 

@@ -185,9 +185,31 @@ class WorkoutViewModel @Inject constructor(
         _uiState.update { it.copy(prBeatenExerciseName = null) }
     }
 
-    fun setDefaultRestDuration(seconds: Int) {
-        _uiState.update { it.copy(restTimerTotalSeconds = seconds) }
+    fun changeRestDuration(seconds: Int) {
+        // Restart the running timer (or just update the default if idle)
+        if (_uiState.value.restTimerRemaining != null) {
+            startRestTimer(seconds)
+        } else {
+            _uiState.update { it.copy(restTimerTotalSeconds = seconds) }
+        }
+        // Persist global default
         viewModelScope.launch { prefs.setDefaultRestDuration(seconds) }
+        // Persist to current exercise's RoutineExercise in DB
+        val idx = _uiState.value.currentExerciseIndex
+        val currentEx = _uiState.value.exercises.getOrNull(idx) ?: return
+        viewModelScope.launch {
+            repository.updateRoutineExerciseRest(currentEx.routineExercise.id, seconds)
+        }
+        // Update in-memory state so the chip stays highlighted on next set
+        _uiState.update {
+            val updated = it.exercises.toMutableList()
+            if (idx < updated.size) {
+                updated[idx] = updated[idx].copy(
+                    routineExercise = updated[idx].routineExercise.copy(restSeconds = seconds)
+                )
+            }
+            it.copy(exercises = updated)
+        }
     }
 
     fun loadExerciseProgress(exerciseId: String, exerciseName: String) {

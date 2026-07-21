@@ -100,4 +100,7 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getProgressionForExercise(exerciseId: String, limit: Int = 20): List<ExerciseProgressPoint> =
         workoutDao.getProgressionForExercise(exerciseId, limit)
+
+    suspend fun updateRoutineExerciseRest(routineExerciseId: Long, restSeconds: Int) =
+        routineDao.updateRestSeconds(routineExerciseId, restSeconds)
 }
