@@ -58,18 +58,17 @@ fun RoutinesScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 Text(
                     "Mes Routines",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { showImportDialog = true },
@@ -89,7 +88,7 @@ fun RoutinesScreen(
                     ) {
                         Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Planning")
+                        Text("Planning", fontSize = 13.sp)
                     }
                 }
             }

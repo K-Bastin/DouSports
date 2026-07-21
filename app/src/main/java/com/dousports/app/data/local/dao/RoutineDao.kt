@@ -43,4 +43,7 @@ interface RoutineDao {
 
     @Query("DELETE FROM routine_exercises WHERE routineId = :routineId")
     suspend fun clearRoutineExercises(routineId: Long)
+
+    @Query("UPDATE routine_exercises SET restSeconds = :restSeconds WHERE id = :id")
+    suspend fun updateRestSeconds(id: Long, restSeconds: Int)
 }
