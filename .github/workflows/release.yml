@@ -42,6 +42,10 @@ jobs:
             "platforms;android-34" \
             "build-tools;34.0.0"
 
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ runner.temp }}/release.keystore
+
       - name: Extract version name
         id: version
         run: |
@@ -49,13 +53,18 @@ jobs:
           echo "name=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build Debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      - name: Build Release APK
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Rename APK
         run: |
-          mv app/build/outputs/apk/debug/app-debug.apk \
-             app/build/outputs/apk/debug/DouSports-${{ steps.version.outputs.tag }}.apk
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/DouSports-${{ steps.version.outputs.tag }}.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -68,5 +77,5 @@ jobs:
             Télécharge et installe **DouSports-${{ steps.version.outputs.tag }}.apk** sur ton appareil Android.
 
             > Assure-toi d'autoriser l'installation depuis des sources inconnues dans les paramètres Android.
-          files: app/build/outputs/apk/debug/DouSports-${{ steps.version.outputs.tag }}.apk
+          files: app/build/outputs/apk/release/DouSports-${{ steps.version.outputs.tag }}.apk
           make_latest: true
