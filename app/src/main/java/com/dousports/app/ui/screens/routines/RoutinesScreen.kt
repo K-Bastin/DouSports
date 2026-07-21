@@ -1,10 +1,14 @@
 package com.dousports.app.ui.screens.routines
 
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,8 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.dousports.app.data.local.entity.RoutineEntity
 import com.dousports.app.ui.theme.OrangeEnergy
@@ -29,6 +39,7 @@ fun RoutinesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var deleteTarget by remember { mutableStateOf<RoutineEntity?>(null) }
+    var showImportDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -59,15 +70,27 @@ fun RoutinesScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                OutlinedButton(
-                    onClick = onNavigateToSchedule,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Planning")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { showImportDialog = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Importer", fontSize = 13.sp)
+                    }
+                    OutlinedButton(
+                        onClick = onNavigateToSchedule,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Planning")
+                    }
                 }
             }
 
@@ -88,7 +111,8 @@ fun RoutinesScreen(
                             onStart = { onStartRoutine(routine.id) },
                             onEdit = { onEditRoutine(routine.id) },
                             onDelete = { deleteTarget = routine },
-                            onDuplicate = { viewModel.duplicateRoutine(routine.id) }
+                            onDuplicate = { viewModel.duplicateRoutine(routine.id) },
+                            onShare = { viewModel.shareRoutine(routine.id) }
                         )
                     }
                     item { Spacer(Modifier.height(72.dp)) }
@@ -115,6 +139,174 @@ fun RoutinesScreen(
             }
         )
     }
+
+    // Share dialog
+    val shareCode = uiState.shareCode
+    val shareQr = uiState.shareQr
+    val shareRoutineName = uiState.shareRoutineName
+    if (shareCode != null && shareRoutineName != null) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = viewModel::clearShare,
+            title = { Text("Partager — $shareRoutineName") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (shareQr != null) {
+                        Image(
+                            bitmap = shareQr.asImageBitmap(),
+                            contentDescription = "QR code",
+                            modifier = Modifier
+                                .size(200.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    Text(
+                        "Scanne le QR code ou copie le code ci-dessous pour partager cette routine.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = shareCode,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Code de partage") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = OrangeEnergy
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("routine", shareCode))
+                        viewModel.clearShare()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangeEnergy)
+                ) {
+                    Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Copier le code")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::clearShare) { Text("Fermer") }
+            }
+        )
+    }
+
+    // Import dialog
+    if (showImportDialog) {
+        ImportRoutineDialog(
+            importPreview = uiState.importPreview,
+            importError = uiState.importError,
+            onPreview = viewModel::previewImport,
+            onConfirm = {
+                viewModel.confirmImport()
+                showImportDialog = false
+            },
+            onDismiss = {
+                viewModel.clearImport()
+                showImportDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun ImportRoutineDialog(
+    importPreview: com.dousports.app.utils.RoutineShareDto?,
+    importError: String?,
+    onPreview: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var codeInput by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Importer une routine") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = codeInput,
+                    onValueChange = { codeInput = it },
+                    label = { Text("Code de partage") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 4,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = OrangeEnergy),
+                    keyboardOptions = KeyboardOptions.Default
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                            codeInput = text
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy)
+                    ) {
+                        Icon(Icons.Default.ContentPaste, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Coller", fontSize = 13.sp)
+                    }
+                    Button(
+                        onClick = { onPreview(codeInput) },
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangeEnergy),
+                        enabled = codeInput.isNotBlank()
+                    ) { Text("Vérifier") }
+                }
+
+                if (importError != null) {
+                    Text(importError, color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+
+                if (importPreview != null) {
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(importPreview.name, fontWeight = FontWeight.Bold)
+                            if (importPreview.description.isNotBlank()) {
+                                Text(importPreview.description, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(
+                                "${importPreview.exercises.size} exercice(s)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OrangeEnergy
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (importPreview != null) {
+                Button(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangeEnergy)
+                ) { Text("Importer") }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
 }
 
 @Composable
@@ -123,7 +315,8 @@ private fun RoutineListCard(
     onStart: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onDuplicate: () -> Unit = {}
+    onDuplicate: () -> Unit = {},
+    onShare: () -> Unit = {}
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -189,6 +382,11 @@ private fun RoutineListCard(
                         text = { Text("Dupliquer") },
                         leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
                         onClick = { menuExpanded = false; onDuplicate() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Partager") },
+                        leadingIcon = { Icon(Icons.Default.Share, null) },
+                        onClick = { menuExpanded = false; onShare() }
                     )
                     DropdownMenuItem(
                         text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
