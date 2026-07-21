@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.action.actionLaunchActivity
+import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
@@ -54,7 +54,7 @@ private fun WidgetContent(context: Context, schedule: WeeklyScheduleEntity?) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(Color(0xFF1A1A1A))
-            .clickable(actionLaunchActivity(launchIntent)),
+            .clickable(actionStartActivity(launchIntent)),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -86,7 +86,7 @@ private fun WidgetContent(context: Context, schedule: WeeklyScheduleEntity?) {
                     modifier = GlanceModifier
                         .background(Color(0xFFFF8C00))
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable(actionLaunchActivity(launchIntent)),
+                        .clickable(actionStartActivity(launchIntent)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
