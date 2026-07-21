@@ -1,5 +1,6 @@
 package com.dousports.app.ui.screens.schedule
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,7 +24,9 @@ import com.dousports.app.data.local.entity.WeeklyScheduleEntity
 import com.dousports.app.data.repository.WeeklyScheduleRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.ui.theme.OrangeEnergy
+import com.dousports.app.widget.TodayRoutineWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -39,7 +42,8 @@ data class WeeklyScheduleUiState(
 @HiltViewModel
 class WeeklyScheduleViewModel @Inject constructor(
     private val scheduleRepository: WeeklyScheduleRepository,
-    private val workoutRepository: WorkoutRepository
+    private val workoutRepository: WorkoutRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WeeklyScheduleUiState())
@@ -65,12 +69,14 @@ class WeeklyScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             scheduleRepository.setDay(dayOfWeek, routine.id, routine.name)
             _state.update { it.copy(pickerDay = null) }
+            TodayRoutineWidget().updateAll(context)
         }
     }
 
     fun clearDay(dayOfWeek: Int) {
         viewModelScope.launch {
             scheduleRepository.clearDay(dayOfWeek)
+            TodayRoutineWidget().updateAll(context)
         }
     }
 }
