@@ -18,6 +18,7 @@ import javax.inject.Inject
 enum class TimedPhase { READY, EXERCISE, REST, FINISHED }
 
 data class TimedWorkoutUiState(
+    val routineId: Long = 0,
     val routineName: String = "",
     val routineColor: Int = 0,
     val exercises: List<RoutineExerciseEntity> = emptyList(),
@@ -60,6 +61,7 @@ class TimedWorkoutViewModel @Inject constructor(
             val firstDuration = exercises.firstOrNull()?.durationSeconds ?: 45
             _uiState.update {
                 it.copy(
+                    routineId = routineId,
                     routineName = routine.name,
                     routineColor = routine.color,
                     exercises = exercises,
@@ -100,23 +102,30 @@ class TimedWorkoutViewModel @Inject constructor(
 
     fun skipPhase() {
         phaseJob?.cancel()
-        advancePhase()
+        advancePhaseState()
+        if (_uiState.value.phase != TimedPhase.FINISHED && !_uiState.value.isPaused) {
+            startPhaseCountdown()
+        }
     }
 
     fun clearVibrate() {
         _uiState.update { it.copy(shouldVibrate = false) }
     }
 
+    // Single continuous loop — never calls itself recursively, so no self-cancellation.
     private fun startPhaseCountdown() {
         phaseJob?.cancel()
         phaseJob = viewModelScope.launch {
             while (true) {
                 delay(1000)
-                val remaining = _uiState.value.phaseRemaining - 1
+                val state = _uiState.value
+                if (state.isPaused || state.phase == TimedPhase.FINISHED) break
+                val remaining = state.phaseRemaining - 1
                 if (remaining <= 0) {
                     _uiState.update { it.copy(phaseRemaining = 0, shouldVibrate = true) }
-                    advancePhase()
-                    break
+                    advancePhaseState()
+                    if (_uiState.value.phase == TimedPhase.FINISHED) break
+                    // Loop continues for the new phase — phaseRemaining already updated.
                 } else {
                     _uiState.update { it.copy(phaseRemaining = remaining) }
                 }
@@ -124,16 +133,15 @@ class TimedWorkoutViewModel @Inject constructor(
         }
     }
 
-    private fun advancePhase() {
+    // Pure state transition — never launches coroutines or cancels jobs.
+    private fun advancePhaseState() {
         val state = _uiState.value
         when (state.phase) {
             TimedPhase.READY, TimedPhase.REST -> {
-                // Move to exercise phase (current or next exercise already set)
                 val duration = state.exercises.getOrNull(state.currentExerciseIndex)?.durationSeconds ?: 45
                 _uiState.update {
                     it.copy(phase = TimedPhase.EXERCISE, phaseRemaining = duration, phaseDuration = duration)
                 }
-                if (!_uiState.value.isPaused) startPhaseCountdown()
             }
             TimedPhase.EXERCISE -> {
                 val nextIndex = state.currentExerciseIndex + 1
@@ -149,7 +157,6 @@ class TimedWorkoutViewModel @Inject constructor(
                             phaseDuration = restDuration
                         )
                     }
-                    if (!_uiState.value.isPaused) startPhaseCountdown()
                 }
             }
             TimedPhase.FINISHED -> {}
@@ -169,15 +176,14 @@ class TimedWorkoutViewModel @Inject constructor(
     }
 
     private fun finishWorkout() {
-        phaseJob?.cancel()
         globalTimerJob?.cancel()
+        val state = _uiState.value
+        val sessionId = state.sessionId ?: return
         viewModelScope.launch {
-            val state = _uiState.value
-            val sessionId = state.sessionId ?: return@launch
             repository.updateSession(
                 WorkoutSessionEntity(
                     id = sessionId,
-                    routineId = 0,
+                    routineId = state.routineId,
                     routineName = state.routineName,
                     startedAt = state.sessionStartedAt,
                     finishedAt = System.currentTimeMillis(),
@@ -185,7 +191,7 @@ class TimedWorkoutViewModel @Inject constructor(
                     routineColor = state.routineColor
                 )
             )
-            repository.getRoutineById(repository.getSessionById(sessionId)?.routineId ?: 0)?.let { routine ->
+            repository.getRoutineById(state.routineId)?.let { routine ->
                 repository.updateRoutine(routine.copy(lastPerformedAt = System.currentTimeMillis()))
             }
         }
