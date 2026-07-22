@@ -33,7 +33,7 @@ import com.dousports.app.utils.toFormattedDate
 fun RoutinesScreen(
     onCreateRoutine: () -> Unit,
     onEditRoutine: (Long) -> Unit,
-    onStartRoutine: (Long) -> Unit,
+    onStartRoutine: (Long, Boolean) -> Unit,
     onNavigateToSchedule: () -> Unit = {},
     viewModel: RoutinesViewModel = hiltViewModel()
 ) {
@@ -107,7 +107,7 @@ fun RoutinesScreen(
                     items(uiState.routines, key = { it.id }) { routine ->
                         RoutineListCard(
                             routine = routine,
-                            onStart = { onStartRoutine(routine.id) },
+                            onStart = { onStartRoutine(routine.id, routine.isTimed) },
                             onEdit = { onEditRoutine(routine.id) },
                             onDelete = { deleteTarget = routine },
                             onDuplicate = { viewModel.duplicateRoutine(routine.id) },

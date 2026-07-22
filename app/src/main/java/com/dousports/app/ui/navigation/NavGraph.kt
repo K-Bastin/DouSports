@@ -23,6 +23,7 @@ import com.dousports.app.ui.screens.schedule.WeeklyScheduleScreen
 import com.dousports.app.ui.screens.stats.StatsScreen
 import com.dousports.app.ui.screens.update.UpdateScreen
 import com.dousports.app.ui.screens.workout.ActiveWorkoutScreen
+import com.dousports.app.ui.screens.workout.TimedWorkoutScreen
 import com.dousports.app.ui.viewmodel.UpdateCheckViewModel
 
 sealed class Screen(val route: String) {
@@ -38,6 +39,9 @@ sealed class Screen(val route: String) {
     }
     object ActiveWorkout : Screen("active-workout/{routineId}") {
         fun createRoute(routineId: Long) = "active-workout/$routineId"
+    }
+    object TimedWorkout : Screen("timed-workout/{routineId}") {
+        fun createRoute(routineId: Long) = "timed-workout/$routineId"
     }
     object CreateExercise : Screen("create-exercise?exerciseId={exerciseId}") {
         fun createRoute(exerciseId: String? = null) =
@@ -126,8 +130,12 @@ fun DouSportsNavGraph() {
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
-                    onStartWorkout = { routineId ->
-                        navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
+                    onStartWorkout = { routineId, isTimed ->
+                        if (isTimed) {
+                            navController.navigate(Screen.TimedWorkout.createRoute(routineId))
+                        } else {
+                            navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
+                        }
                     },
                     onNavigateToRoutines = {
                         navController.navigate(Screen.Routines.route) {
@@ -191,8 +199,12 @@ fun DouSportsNavGraph() {
                     onEditRoutine = { routineId ->
                         navController.navigate(Screen.CreateRoutine.createRoute(routineId))
                     },
-                    onStartRoutine = { routineId ->
-                        navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
+                    onStartRoutine = { routineId, isTimed ->
+                        if (isTimed) {
+                            navController.navigate(Screen.TimedWorkout.createRoute(routineId))
+                        } else {
+                            navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
+                        }
                     },
                     onNavigateToSchedule = {
                         navController.navigate(Screen.WeeklySchedule.route)
@@ -203,8 +215,12 @@ fun DouSportsNavGraph() {
             composable(Screen.WeeklySchedule.route) {
                 WeeklyScheduleScreen(
                     onBack = { navController.popBackStack() },
-                    onStartRoutine = { routineId ->
-                        navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
+                    onStartRoutine = { routineId, isTimed ->
+                        if (isTimed) {
+                            navController.navigate(Screen.TimedWorkout.createRoute(routineId))
+                        } else {
+                            navController.navigate(Screen.ActiveWorkout.createRoute(routineId))
+                        }
                     }
                 )
             }
@@ -234,6 +250,22 @@ fun DouSportsNavGraph() {
             ) { backStack ->
                 val routineId = backStack.arguments?.getLong("routineId") ?: return@composable
                 ActiveWorkoutScreen(
+                    routineId = routineId,
+                    onFinish = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    },
+                    onCancel = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.TimedWorkout.route,
+                arguments = listOf(navArgument("routineId") { type = NavType.LongType })
+            ) { backStack ->
+                val routineId = backStack.arguments?.getLong("routineId") ?: return@composable
+                TimedWorkoutScreen(
                     routineId = routineId,
                     onFinish = {
                         navController.navigate(Screen.Home.route) {

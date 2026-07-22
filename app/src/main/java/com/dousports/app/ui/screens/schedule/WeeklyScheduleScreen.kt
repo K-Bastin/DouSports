@@ -86,7 +86,7 @@ class WeeklyScheduleViewModel @Inject constructor(
 @Composable
 fun WeeklyScheduleScreen(
     onBack: () -> Unit,
-    onStartRoutine: (Long) -> Unit = {},
+    onStartRoutine: (Long, Boolean) -> Unit = { _, _ -> },
     viewModel: WeeklyScheduleViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -140,7 +140,10 @@ fun WeeklyScheduleScreen(
                     entry = entry,
                     onAssign = { viewModel.openPicker(day) },
                     onClear = { viewModel.clearDay(day) },
-                    onStart = entry?.let { { onStartRoutine(it.routineId) } }
+                    onStart = entry?.let {
+                        val isTimed = state.routines.find { r -> r.id == it.routineId }?.isTimed ?: false
+                        { onStartRoutine(it.routineId, isTimed) }
+                    }
                 )
             }
         }
