@@ -32,7 +32,7 @@ import java.util.*
 
 @Composable
 fun HomeScreen(
-    onStartWorkout: (Long) -> Unit,
+    onStartWorkout: (Long, Boolean) -> Unit,
     onNavigateToRoutines: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -145,7 +145,7 @@ fun HomeScreen(
                     items(uiState.routines) { routine ->
                         RoutineCard(
                             routine = routine,
-                            onStart = { onStartWorkout(routine.id) }
+                            onStart = { onStartWorkout(routine.id, routine.isTimed) }
                         )
                     }
                 }
