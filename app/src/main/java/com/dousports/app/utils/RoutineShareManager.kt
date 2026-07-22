@@ -14,6 +14,7 @@ import javax.inject.Singleton
 data class RoutineShareDto(
     @SerializedName("n") val name: String,
     @SerializedName("d") val description: String,
+    @SerializedName("ti") val isTimed: Boolean = false,
     @SerializedName("e") val exercises: List<ExerciseShareDto>
 )
 
@@ -24,7 +25,8 @@ data class ExerciseShareDto(
     @SerializedName("s") val targetSets: Int,
     @SerializedName("r") val targetReps: Int,
     @SerializedName("w") val targetWeight: Float,
-    @SerializedName("t") val restSeconds: Int
+    @SerializedName("t") val restSeconds: Int,
+    @SerializedName("ds") val durationSeconds: Int = 45
 )
 
 @Singleton
@@ -34,6 +36,7 @@ class RoutineShareManager @Inject constructor(private val gson: Gson) {
         val dto = RoutineShareDto(
             name = routine.name,
             description = routine.description,
+            isTimed = routine.isTimed,
             exercises = exercises.map {
                 ExerciseShareDto(
                     exerciseId = it.exerciseId,
@@ -42,7 +45,8 @@ class RoutineShareManager @Inject constructor(private val gson: Gson) {
                     targetSets = it.targetSets,
                     targetReps = it.targetReps,
                     targetWeight = it.targetWeight,
-                    restSeconds = it.restSeconds
+                    restSeconds = it.restSeconds,
+                    durationSeconds = it.durationSeconds
                 )
             }
         )
