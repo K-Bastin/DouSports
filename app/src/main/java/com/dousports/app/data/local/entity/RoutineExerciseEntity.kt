@@ -26,5 +26,6 @@ data class RoutineExerciseEntity(
     val targetSets: Int = 3,
     val targetReps: Int = 10,
     val targetWeight: Float = 0f,
-    val restSeconds: Int = 90
+    val restSeconds: Int = 90,
+    val durationSeconds: Int = 45
 )

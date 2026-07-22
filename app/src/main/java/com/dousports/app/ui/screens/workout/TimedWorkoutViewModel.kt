@@ -1,0 +1,212 @@
+package com.dousports.app.ui.screens.workout
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.dousports.app.data.local.entity.RoutineExerciseEntity
+import com.dousports.app.data.local.entity.WorkoutSessionEntity
+import com.dousports.app.data.repository.WorkoutRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+enum class TimedPhase { READY, EXERCISE, REST, FINISHED }
+
+data class TimedWorkoutUiState(
+    val routineName: String = "",
+    val routineColor: Int = 0,
+    val exercises: List<RoutineExerciseEntity> = emptyList(),
+    val currentExerciseIndex: Int = 0,
+    val phase: TimedPhase = TimedPhase.READY,
+    val phaseRemaining: Int = 0,
+    val phaseDuration: Int = 0,
+    val totalElapsedSeconds: Long = 0L,
+    val isPaused: Boolean = false,
+    val isLoading: Boolean = true,
+    val sessionId: Long? = null,
+    val sessionStartedAt: Long = 0L,
+    val shouldVibrate: Boolean = false
+)
+
+@HiltViewModel
+class TimedWorkoutViewModel @Inject constructor(
+    private val repository: WorkoutRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(TimedWorkoutUiState())
+    val uiState: StateFlow<TimedWorkoutUiState> = _uiState.asStateFlow()
+
+    private var phaseJob: Job? = null
+    private var globalTimerJob: Job? = null
+
+    fun loadRoutine(routineId: Long) {
+        viewModelScope.launch {
+            val routine = repository.getRoutineById(routineId) ?: return@launch
+            val exercises = repository.getExercisesForRoutineSync(routineId)
+            val startedAt = System.currentTimeMillis()
+            val sessionId = repository.insertSession(
+                WorkoutSessionEntity(
+                    routineId = routineId,
+                    routineName = routine.name,
+                    startedAt = startedAt,
+                    routineColor = routine.color
+                )
+            )
+            val firstDuration = exercises.firstOrNull()?.durationSeconds ?: 45
+            _uiState.update {
+                it.copy(
+                    routineName = routine.name,
+                    routineColor = routine.color,
+                    exercises = exercises,
+                    phase = TimedPhase.READY,
+                    phaseRemaining = firstDuration,
+                    phaseDuration = firstDuration,
+                    sessionId = sessionId,
+                    sessionStartedAt = startedAt,
+                    isLoading = false
+                )
+            }
+        }
+    }
+
+    fun startOrResume() {
+        val state = _uiState.value
+        if (state.phase == TimedPhase.FINISHED) return
+
+        if (state.isPaused) {
+            _uiState.update { it.copy(isPaused = false) }
+            startPhaseCountdown()
+            if (globalTimerJob?.isActive != true) startGlobalTimer()
+            return
+        }
+
+        if (state.phase == TimedPhase.READY) {
+            _uiState.update { it.copy(isPaused = false) }
+            startPhaseCountdown()
+            startGlobalTimer()
+        }
+    }
+
+    fun pause() {
+        phaseJob?.cancel()
+        globalTimerJob?.cancel()
+        _uiState.update { it.copy(isPaused = true) }
+    }
+
+    fun skipPhase() {
+        phaseJob?.cancel()
+        advancePhase()
+    }
+
+    fun clearVibrate() {
+        _uiState.update { it.copy(shouldVibrate = false) }
+    }
+
+    private fun startPhaseCountdown() {
+        phaseJob?.cancel()
+        phaseJob = viewModelScope.launch {
+            while (true) {
+                delay(1000)
+                val remaining = _uiState.value.phaseRemaining - 1
+                if (remaining <= 0) {
+                    _uiState.update { it.copy(phaseRemaining = 0, shouldVibrate = true) }
+                    advancePhase()
+                    break
+                } else {
+                    _uiState.update { it.copy(phaseRemaining = remaining) }
+                }
+            }
+        }
+    }
+
+    private fun advancePhase() {
+        val state = _uiState.value
+        when (state.phase) {
+            TimedPhase.READY, TimedPhase.REST -> {
+                // Move to exercise phase (current or next exercise already set)
+                val duration = state.exercises.getOrNull(state.currentExerciseIndex)?.durationSeconds ?: 45
+                _uiState.update {
+                    it.copy(phase = TimedPhase.EXERCISE, phaseRemaining = duration, phaseDuration = duration)
+                }
+                if (!_uiState.value.isPaused) startPhaseCountdown()
+            }
+            TimedPhase.EXERCISE -> {
+                val nextIndex = state.currentExerciseIndex + 1
+                if (nextIndex >= state.exercises.size) {
+                    finishWorkout()
+                } else {
+                    val restDuration = state.exercises[state.currentExerciseIndex].restSeconds.takeIf { it > 0 } ?: 30
+                    _uiState.update {
+                        it.copy(
+                            phase = TimedPhase.REST,
+                            currentExerciseIndex = nextIndex,
+                            phaseRemaining = restDuration,
+                            phaseDuration = restDuration
+                        )
+                    }
+                    if (!_uiState.value.isPaused) startPhaseCountdown()
+                }
+            }
+            TimedPhase.FINISHED -> {}
+        }
+    }
+
+    private fun startGlobalTimer() {
+        globalTimerJob?.cancel()
+        globalTimerJob = viewModelScope.launch {
+            while (true) {
+                delay(1000)
+                if (!_uiState.value.isPaused) {
+                    _uiState.update { it.copy(totalElapsedSeconds = it.totalElapsedSeconds + 1) }
+                }
+            }
+        }
+    }
+
+    private fun finishWorkout() {
+        phaseJob?.cancel()
+        globalTimerJob?.cancel()
+        viewModelScope.launch {
+            val state = _uiState.value
+            val sessionId = state.sessionId ?: return@launch
+            repository.updateSession(
+                WorkoutSessionEntity(
+                    id = sessionId,
+                    routineId = 0,
+                    routineName = state.routineName,
+                    startedAt = state.sessionStartedAt,
+                    finishedAt = System.currentTimeMillis(),
+                    durationSeconds = state.totalElapsedSeconds,
+                    routineColor = state.routineColor
+                )
+            )
+            repository.getRoutineById(repository.getSessionById(sessionId)?.routineId ?: 0)?.let { routine ->
+                repository.updateRoutine(routine.copy(lastPerformedAt = System.currentTimeMillis()))
+            }
+        }
+        _uiState.update { it.copy(phase = TimedPhase.FINISHED, shouldVibrate = true) }
+    }
+
+    fun cancelWorkout(onDone: () -> Unit) {
+        phaseJob?.cancel()
+        globalTimerJob?.cancel()
+        viewModelScope.launch {
+            val sessionId = _uiState.value.sessionId
+            if (sessionId != null) {
+                repository.getSessionById(sessionId)?.let { repository.deleteSession(it) }
+            }
+            onDone()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        phaseJob?.cancel()
+        globalTimerJob?.cancel()
+    }
+}

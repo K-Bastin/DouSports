@@ -54,7 +54,8 @@ data class RoutineExerciseItem(
     val sets: Int = 3,
     val reps: Int = 10,
     val weight: Float = 0f,
-    val restSeconds: Int = 90
+    val restSeconds: Int = 90,
+    val durationSeconds: Int = 45
 )
 
 val ROUTINE_COLORS = listOf(
@@ -74,6 +75,7 @@ data class CreateRoutineState(
     val name: String = "",
     val description: String = "",
     val color: Int = 0,
+    val isTimed: Boolean = false,
     val exercises: List<RoutineExerciseItem> = emptyList(),
     val exerciseSearchQuery: String = "",
     val exerciseSearchResults: List<ExerciseEntity> = emptyList(),
@@ -116,7 +118,8 @@ class CreateRoutineViewModel @Inject constructor(
                     sets = re.targetSets,
                     reps = re.targetReps,
                     weight = re.targetWeight,
-                    restSeconds = re.restSeconds
+                    restSeconds = re.restSeconds,
+                    durationSeconds = re.durationSeconds
                 )
             }
             _state.update {
@@ -124,6 +127,7 @@ class CreateRoutineViewModel @Inject constructor(
                     name = routine.name,
                     description = routine.description,
                     color = routine.color,
+                    isTimed = routine.isTimed,
                     exercises = items
                 )
             }
@@ -133,6 +137,7 @@ class CreateRoutineViewModel @Inject constructor(
     fun onNameChange(name: String) = _state.update { it.copy(name = name) }
     fun onDescriptionChange(desc: String) = _state.update { it.copy(description = desc) }
     fun onColorChange(color: Int) = _state.update { it.copy(color = color) }
+    fun onIsTimedChange(isTimed: Boolean) = _state.update { it.copy(isTimed = isTimed) }
 
     fun showPicker() = _state.update { it.copy(isPickerVisible = true) }
     fun hidePicker() = _state.update { it.copy(isPickerVisible = false) }
@@ -170,13 +175,14 @@ class CreateRoutineViewModel @Inject constructor(
         }
     }
 
-    fun updateExercise(tempId: Long, sets: Int? = null, reps: Int? = null, weight: Float? = null) {
+    fun updateExercise(tempId: Long, sets: Int? = null, reps: Int? = null, weight: Float? = null, durationSeconds: Int? = null) {
         _state.update {
             it.copy(exercises = it.exercises.map { e ->
                 if (e.tempId == tempId) e.copy(
                     sets = sets ?: e.sets,
                     reps = reps ?: e.reps,
-                    weight = weight ?: e.weight
+                    weight = weight ?: e.weight,
+                    durationSeconds = durationSeconds ?: e.durationSeconds
                 ) else e
             })
         }
@@ -188,12 +194,12 @@ class CreateRoutineViewModel @Inject constructor(
             val s = _state.value
             val id = if (routineId != null) {
                 workoutRepository.updateRoutine(
-                    RoutineEntity(id = routineId, name = s.name, description = s.description, color = s.color)
+                    RoutineEntity(id = routineId, name = s.name, description = s.description, color = s.color, isTimed = s.isTimed)
                 )
                 routineId
             } else {
                 workoutRepository.insertRoutine(
-                    RoutineEntity(name = s.name, description = s.description, color = s.color)
+                    RoutineEntity(name = s.name, description = s.description, color = s.color, isTimed = s.isTimed)
                 )
             }
             val items = s.exercises.mapIndexed { index, e ->
@@ -205,7 +211,8 @@ class CreateRoutineViewModel @Inject constructor(
                     targetSets = e.sets,
                     targetReps = e.reps,
                     targetWeight = e.weight,
-                    restSeconds = e.restSeconds
+                    restSeconds = e.restSeconds,
+                    durationSeconds = e.durationSeconds
                 )
             }
             workoutRepository.saveRoutineExercises(id, items)
@@ -327,6 +334,39 @@ fun CreateRoutineScreen(
             }
 
             item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Routine chronométrée",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Chaque exercice dure un temps fixé",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = state.isTimed,
+                            onCheckedChange = viewModel::onIsTimedChange,
+                            colors = SwitchDefaults.colors(checkedThumbColor = OrangeEnergy, checkedTrackColor = OrangeEnergy.copy(alpha = 0.4f))
+                        )
+                    }
+                }
+            }
+
+            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -353,12 +393,14 @@ fun CreateRoutineScreen(
                 RoutineExerciseCard(
                     index = index + 1,
                     item = exercise,
+                    isTimed = state.isTimed,
                     isDragging = isDragging,
                     dragOffset = if (isDragging) dragOffset else 0f,
                     onRemove = { viewModel.removeExercise(exercise.tempId) },
                     onSetsChange = { viewModel.updateExercise(exercise.tempId, sets = it) },
                     onRepsChange = { viewModel.updateExercise(exercise.tempId, reps = it) },
                     onWeightChange = { viewModel.updateExercise(exercise.tempId, weight = it) },
+                    onDurationChange = { viewModel.updateExercise(exercise.tempId, durationSeconds = it) },
                     onDragStart = {
                         draggedIndex = index
                         currentDragIndex.intValue = index
@@ -482,10 +524,12 @@ private fun RoutineColorPicker(selectedColor: Int, onColorSelected: (Int) -> Uni
 private fun RoutineExerciseCard(
     index: Int,
     item: RoutineExerciseItem,
+    isTimed: Boolean = false,
     onRemove: () -> Unit,
     onSetsChange: (Int) -> Unit,
     onRepsChange: (Int) -> Unit,
     onWeightChange: (Float) -> Unit,
+    onDurationChange: (Int) -> Unit = {},
     isDragging: Boolean = false,
     dragOffset: Float = 0f,
     onDragStart: () -> Unit = {},
@@ -557,25 +601,34 @@ private fun RoutineExerciseCard(
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (isTimed) {
                 SmallNumberField(
-                    label = "Séries",
-                    value = item.sets,
-                    onValueChange = onSetsChange,
-                    modifier = Modifier.weight(1f)
+                    label = "Durée (s)",
+                    value = item.durationSeconds,
+                    onValueChange = onDurationChange,
+                    modifier = Modifier.fillMaxWidth(0.45f)
                 )
-                SmallNumberField(
-                    label = "Reps",
-                    value = item.reps,
-                    onValueChange = onRepsChange,
-                    modifier = Modifier.weight(1f)
-                )
-                SmallNumberField(
-                    label = "Poids (kg)",
-                    value = item.weight.toInt(),
-                    onValueChange = { onWeightChange(it.toFloat()) },
-                    modifier = Modifier.weight(1f)
-                )
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SmallNumberField(
+                        label = "Séries",
+                        value = item.sets,
+                        onValueChange = onSetsChange,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SmallNumberField(
+                        label = "Reps",
+                        value = item.reps,
+                        onValueChange = onRepsChange,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SmallNumberField(
+                        label = "Poids (kg)",
+                        value = item.weight.toInt(),
+                        onValueChange = { onWeightChange(it.toFloat()) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
