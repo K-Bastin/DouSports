@@ -34,6 +34,8 @@ import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.ui.theme.OrangeEnergy
+import com.dousports.app.utils.ALL_BODY_PARTS
+import com.dousports.app.utils.ALL_EQUIPMENT
 import com.dousports.app.utils.secondaryMusclesList
 import com.dousports.app.utils.stepsAsList
 import com.google.gson.Gson
@@ -77,10 +79,12 @@ class CreateExerciseViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val bodyParts = repository.getAllBodyParts()
-            val equipment = repository.getAllEquipment()
+            val dbBodyParts = repository.getAllBodyParts()
+            val dbEquipment = repository.getAllEquipment()
             val targets = repository.getAllTargets()
             val muscleGroups = repository.getAllMuscleGroups()
+            val bodyParts = (ALL_BODY_PARTS + dbBodyParts).map { it.lowercase() }.distinct().sorted()
+            val equipment = (ALL_EQUIPMENT + dbEquipment).map { it.lowercase() }.distinct().sorted()
             val allMuscles = (targets + muscleGroups).distinct().sorted()
             _uiState.update {
                 it.copy(
@@ -601,7 +605,7 @@ private fun DropdownTextField(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
-                filtered.take(5).forEach { option ->
+                filtered.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option.replaceFirstChar { it.uppercase() }) },
                         onClick = {
