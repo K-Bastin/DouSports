@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -24,20 +25,26 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.dousports.app.data.local.entity.ExerciseEntity
 import com.dousports.app.data.local.entity.RoutineEntity
 import com.dousports.app.data.local.entity.RoutineExerciseEntity
 import com.dousports.app.data.repository.ExerciseRepository
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.ui.theme.OrangeEnergy
+import com.dousports.app.utils.imageUrl
 import com.dousports.app.utils.toFrBodyPart
 import com.dousports.app.utils.toFrEquipment
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,6 +52,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 data class RoutineExerciseItem(
@@ -79,6 +87,10 @@ data class CreateRoutineState(
     val exercises: List<RoutineExerciseItem> = emptyList(),
     val exerciseSearchQuery: String = "",
     val exerciseSearchResults: List<ExerciseEntity> = emptyList(),
+    val pickerBodyParts: List<String> = emptyList(),
+    val pickerEquipmentList: List<String> = emptyList(),
+    val pickerSelectedBodyPart: String? = null,
+    val pickerSelectedEquipment: String? = null,
     val isPickerVisible: Boolean = false,
     val isSaving: Boolean = false,
     val isSaved: Boolean = false
@@ -95,12 +107,23 @@ class CreateRoutineViewModel @Inject constructor(
     val state: StateFlow<CreateRoutineState> = _state.asStateFlow()
 
     private val searchQuery = MutableStateFlow("")
+    private val pickerBodyPart = MutableStateFlow<String?>(null)
+    private val pickerEquipment = MutableStateFlow<String?>(null)
 
     init {
         viewModelScope.launch {
-            searchQuery
-                .debounce(300)
-                .flatMapLatest { q -> exerciseRepository.searchExercises(q) }
+            val bodyParts = exerciseRepository.getAllBodyParts()
+            val equipment = exerciseRepository.getAllEquipment()
+            _state.update { it.copy(pickerBodyParts = bodyParts, pickerEquipmentList = equipment) }
+        }
+
+        viewModelScope.launch {
+            combine(
+                searchQuery.debounce(300),
+                pickerBodyPart,
+                pickerEquipment
+            ) { q, bp, eq -> Triple(q, bp, eq) }
+                .flatMapLatest { (q, bp, eq) -> exerciseRepository.filterExercises(q, bp, eq) }
                 .collect { results ->
                     _state.update { it.copy(exerciseSearchResults = results) }
                 }
@@ -145,6 +168,23 @@ class CreateRoutineViewModel @Inject constructor(
     fun onSearchChange(q: String) {
         searchQuery.value = q
         _state.update { it.copy(exerciseSearchQuery = q) }
+        if (q.isNotBlank()) {
+            pickerBodyPart.value = null
+            pickerEquipment.value = null
+            _state.update { it.copy(pickerSelectedBodyPart = null, pickerSelectedEquipment = null) }
+        }
+    }
+
+    fun onPickerBodyPartSelected(bodyPart: String?) {
+        pickerBodyPart.value = bodyPart
+        searchQuery.value = ""
+        _state.update { it.copy(pickerSelectedBodyPart = bodyPart, exerciseSearchQuery = "") }
+    }
+
+    fun onPickerEquipmentSelected(equipment: String?) {
+        pickerEquipment.value = equipment
+        searchQuery.value = ""
+        _state.update { it.copy(pickerSelectedEquipment = equipment, exerciseSearchQuery = "") }
     }
 
     fun addExercise(exercise: ExerciseEntity) {
@@ -156,10 +196,14 @@ class CreateRoutineViewModel @Inject constructor(
             it.copy(
                 exercises = it.exercises + item,
                 isPickerVisible = false,
-                exerciseSearchQuery = ""
+                exerciseSearchQuery = "",
+                pickerSelectedBodyPart = null,
+                pickerSelectedEquipment = null
             )
         }
         searchQuery.value = ""
+        pickerBodyPart.value = null
+        pickerEquipment.value = null
     }
 
     fun removeExercise(tempId: Long) =
@@ -240,7 +284,13 @@ fun CreateRoutineScreen(
         ExercisePickerSheet(
             query = state.exerciseSearchQuery,
             results = state.exerciseSearchResults,
+            bodyParts = state.pickerBodyParts,
+            equipmentList = state.pickerEquipmentList,
+            selectedBodyPart = state.pickerSelectedBodyPart,
+            selectedEquipment = state.pickerSelectedEquipment,
             onQueryChange = viewModel::onSearchChange,
+            onBodyPartSelected = viewModel::onPickerBodyPartSelected,
+            onEquipmentSelected = viewModel::onPickerEquipmentSelected,
             onSelect = viewModel::addExercise,
             onDismiss = viewModel::hidePicker
         )
@@ -372,11 +422,25 @@ fun CreateRoutineScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Exercices (${state.exercises.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            "Exercices (${state.exercises.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (state.isTimed && state.exercises.isNotEmpty()) {
+                            val totalSec = state.exercises.sumOf { it.durationSeconds } +
+                                state.exercises.dropLast(1).sumOf { it.restSeconds }
+                            val m = totalSec / 60
+                            val s = totalSec % 60
+                            val label = if (m > 0) "~${m}min ${s}s" else "~${s}s"
+                            Text(
+                                "Durée estimée : $label",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OrangeEnergy
+                            )
+                        }
+                    }
                     OutlinedButton(
                         onClick = viewModel::showPicker,
                         border = ButtonDefaults.outlinedButtonBorder
@@ -661,7 +725,13 @@ private fun SmallNumberField(
 private fun ExercisePickerSheet(
     query: String,
     results: List<ExerciseEntity>,
+    bodyParts: List<String>,
+    equipmentList: List<String>,
+    selectedBodyPart: String?,
+    selectedEquipment: String?,
     onQueryChange: (String) -> Unit,
+    onBodyPartSelected: (String?) -> Unit,
+    onEquipmentSelected: (String?) -> Unit,
     onSelect: (ExerciseEntity) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -687,8 +757,15 @@ private fun ExercisePickerSheet(
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                placeholder = { Text("Rechercher...") },
+                placeholder = { Text("Rechercher un exercice...") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(Icons.Default.Clear, null)
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -699,22 +776,161 @@ private fun ExercisePickerSheet(
                     cursorColor = OrangeEnergy
                 )
             )
-            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
-                items(results, key = { it.id }) { exercise ->
-                    ListItem(
-                        headlineContent = { Text(exercise.name) },
-                        supportingContent = {
-                            Text(
-                                "${exercise.bodyPart.toFrBodyPart()} · ${exercise.equipment.toFrEquipment()}",
-                                style = MaterialTheme.typography.bodySmall
+
+            if (bodyParts.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedBodyPart == null,
+                            onClick = { onBodyPartSelected(null) },
+                            label = { Text("Tous") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = OrangeEnergy,
+                                selectedLabelColor = Color.White
                             )
-                        },
-                        modifier = Modifier
-                            .clickable { onSelect(exercise) }
-                            .clip(RoundedCornerShape(8.dp))
-                    )
-                    HorizontalDivider(thickness = 0.5.dp)
+                        )
+                    }
+                    items(bodyParts) { part ->
+                        FilterChip(
+                            selected = selectedBodyPart == part,
+                            onClick = { onBodyPartSelected(if (selectedBodyPart == part) null else part) },
+                            label = { Text(part.toFrBodyPart()) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = OrangeEnergy,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
                 }
+            }
+
+            if (equipmentList.isNotEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedEquipment == null,
+                            onClick = { onEquipmentSelected(null) },
+                            label = { Text("Tout équip.") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+                            )
+                        )
+                    }
+                    items(equipmentList) { equip ->
+                        FilterChip(
+                            selected = selectedEquipment == equip,
+                            onClick = { onEquipmentSelected(if (selectedEquipment == equip) null else equip) },
+                            label = { Text(equip.toFrEquipment()) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+                            )
+                        )
+                    }
+                }
+            }
+
+            Text(
+                "${results.size} exercices",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(results, key = { it.id }) { exercise ->
+                    PickerExerciseCard(exercise = exercise, onClick = { onSelect(exercise) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickerExerciseCard(exercise: ExerciseEntity, onClick: () -> Unit) {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column {
+            if (exercise.isCustom) {
+                if (exercise.gifPath.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(File(exercise.gifPath))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = exercise.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                            .background(OrangeEnergy.copy(alpha = 0.08f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.FitnessCenter, null,
+                            modifier = Modifier.size(40.dp),
+                            tint = OrangeEnergy.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+            } else {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(exercise.imageUrl())
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = exercise.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp)
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                )
+            }
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    exercise.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    exercise.bodyPart.toFrBodyPart(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
