@@ -109,6 +109,9 @@ private val FR_MUSCLES = mapOf(
     "wrists" to "Poignets"
 )
 
+val ALL_BODY_PARTS: List<String> = FR_BODY_PARTS.keys.sorted()
+val ALL_EQUIPMENT: List<String> = FR_EQUIPMENT.keys.sorted()
+
 fun String.toFrBodyPart(): String = FR_BODY_PARTS[this.lowercase()] ?: this.replaceFirstChar { it.uppercase() }
 fun String.toFrEquipment(): String = FR_EQUIPMENT[this.lowercase()] ?: this.replaceFirstChar { it.uppercase() }
 fun String.toFrTarget(): String = FR_TARGETS[this.lowercase()] ?: this.replaceFirstChar { it.uppercase() }
