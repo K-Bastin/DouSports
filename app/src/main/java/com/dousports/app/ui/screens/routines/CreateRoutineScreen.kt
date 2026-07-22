@@ -168,23 +168,16 @@ class CreateRoutineViewModel @Inject constructor(
     fun onSearchChange(q: String) {
         searchQuery.value = q
         _state.update { it.copy(exerciseSearchQuery = q) }
-        if (q.isNotBlank()) {
-            pickerBodyPart.value = null
-            pickerEquipment.value = null
-            _state.update { it.copy(pickerSelectedBodyPart = null, pickerSelectedEquipment = null) }
-        }
     }
 
     fun onPickerBodyPartSelected(bodyPart: String?) {
         pickerBodyPart.value = bodyPart
-        searchQuery.value = ""
-        _state.update { it.copy(pickerSelectedBodyPart = bodyPart, exerciseSearchQuery = "") }
+        _state.update { it.copy(pickerSelectedBodyPart = bodyPart) }
     }
 
     fun onPickerEquipmentSelected(equipment: String?) {
         pickerEquipment.value = equipment
-        searchQuery.value = ""
-        _state.update { it.copy(pickerSelectedEquipment = equipment, exerciseSearchQuery = "") }
+        _state.update { it.copy(pickerSelectedEquipment = equipment) }
     }
 
     fun addExercise(exercise: ExerciseEntity) {
