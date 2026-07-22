@@ -1,11 +1,15 @@
 package com.dousports.app.ui.screens.workout
 
+import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dousports.app.data.local.entity.RoutineExerciseEntity
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
 import com.dousports.app.data.repository.WorkoutRepository
+import com.dousports.app.services.WorkoutForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +40,8 @@ data class TimedWorkoutUiState(
 
 @HiltViewModel
 class TimedWorkoutViewModel @Inject constructor(
-    private val repository: WorkoutRepository
+    private val repository: WorkoutRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimedWorkoutUiState())
@@ -73,6 +78,7 @@ class TimedWorkoutViewModel @Inject constructor(
                     isLoading = false
                 )
             }
+            ContextCompat.startForegroundService(context, WorkoutForegroundService.startIntent(context))
         }
     }
 
@@ -177,6 +183,7 @@ class TimedWorkoutViewModel @Inject constructor(
 
     private fun finishWorkout() {
         globalTimerJob?.cancel()
+        context.startService(WorkoutForegroundService.stopIntent(context))
         val state = _uiState.value
         val sessionId = state.sessionId ?: return
         viewModelScope.launch {
@@ -201,6 +208,7 @@ class TimedWorkoutViewModel @Inject constructor(
     fun cancelWorkout(onDone: () -> Unit) {
         phaseJob?.cancel()
         globalTimerJob?.cancel()
+        context.startService(WorkoutForegroundService.stopIntent(context))
         viewModelScope.launch {
             val sessionId = _uiState.value.sessionId
             if (sessionId != null) {
@@ -214,5 +222,6 @@ class TimedWorkoutViewModel @Inject constructor(
         super.onCleared()
         phaseJob?.cancel()
         globalTimerJob?.cancel()
+        context.startService(WorkoutForegroundService.stopIntent(context))
     }
 }
