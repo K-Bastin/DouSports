@@ -17,6 +17,7 @@ import com.dousports.app.ui.screens.history.WorkoutHistoryScreen
 import com.dousports.app.ui.screens.home.HomeScreen
 import com.dousports.app.ui.screens.profile.ProfileScreen
 import com.dousports.app.ui.screens.exercises.CreateExerciseScreen
+import com.dousports.app.ui.screens.qr.QrScannerScreen
 import com.dousports.app.ui.screens.routines.CreateRoutineScreen
 import com.dousports.app.ui.screens.routines.RoutinesScreen
 import com.dousports.app.ui.screens.schedule.WeeklyScheduleScreen
@@ -52,6 +53,7 @@ sealed class Screen(val route: String) {
     object WorkoutHistory : Screen("workout-history")
     object WeeklySchedule : Screen("weekly-schedule")
     object Update : Screen("update")
+    object QrScanner : Screen("qr-scanner")
 }
 
 data class BottomNavItem(
@@ -68,8 +70,10 @@ val bottomNavItems = listOf(
 )
 
 @Composable
-fun DouSportsNavGraph() {
+fun DouSportsNavGraph(onNavControllerReady: (NavController) -> Unit = {}) {
     val navController = rememberNavController()
+
+    LaunchedEffect(navController) { onNavControllerReady(navController) }
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route
 
@@ -191,8 +195,29 @@ fun DouSportsNavGraph() {
                 )
             }
 
-            composable(Screen.Routines.route) {
+            composable(
+                route = Screen.Routines.route,
+                deepLinks = listOf(
+                    navDeepLink { uriPattern = "dousports://import?code={code}" }
+                ),
+                arguments = listOf(
+                    navArgument("code") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStack ->
+                val deepLinkCode = backStack.arguments?.getString("code")
+                val scannedCode by backStack.savedStateHandle
+                    .getStateFlow("scanned_code", null as String?)
+                    .collectAsState()
+                val autoImportCode = deepLinkCode ?: scannedCode
                 RoutinesScreen(
+                    autoImportCode = autoImportCode,
+                    onAutoImportConsumed = {
+                        backStack.savedStateHandle.remove<String>("scanned_code")
+                    },
                     onCreateRoutine = {
                         navController.navigate(Screen.CreateRoutine.createRoute())
                     },
@@ -208,7 +233,22 @@ fun DouSportsNavGraph() {
                     },
                     onNavigateToSchedule = {
                         navController.navigate(Screen.WeeklySchedule.route)
+                    },
+                    onOpenQrScanner = {
+                        navController.navigate(Screen.QrScanner.route)
                     }
+                )
+            }
+
+            composable(Screen.QrScanner.route) {
+                QrScannerScreen(
+                    onCodeDetected = { code ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("scanned_code", code)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 

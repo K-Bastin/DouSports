@@ -74,7 +74,7 @@ class RoutinesViewModel @Inject constructor(
     fun confirmImport() {
         val dto = _uiState.value.importPreview ?: return
         viewModelScope.launch {
-            val routine = RoutineEntity(name = dto.name, description = dto.description)
+            val routine = RoutineEntity(name = dto.name, description = dto.description, isTimed = dto.isTimed)
             val routineId = repository.insertRoutine(routine)
             val exercises = dto.exercises.mapIndexed { idx, e ->
                 RoutineExerciseEntity(
@@ -85,7 +85,8 @@ class RoutinesViewModel @Inject constructor(
                     targetSets = e.targetSets.coerceAtLeast(1),
                     targetReps = e.targetReps.coerceAtLeast(1),
                     targetWeight = e.targetWeight,
-                    restSeconds = e.restSeconds.coerceAtLeast(0)
+                    restSeconds = e.restSeconds.coerceAtLeast(0),
+                    durationSeconds = e.durationSeconds.coerceAtLeast(1)
                 )
             }
             repository.saveRoutineExercises(routineId, exercises)

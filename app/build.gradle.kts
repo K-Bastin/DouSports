@@ -101,6 +101,9 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.glance.appwidget)
     implementation(libs.zxing.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

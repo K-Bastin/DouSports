@@ -31,15 +31,28 @@ import com.dousports.app.utils.toFormattedDate
 
 @Composable
 fun RoutinesScreen(
+    autoImportCode: String? = null,
+    onAutoImportConsumed: () -> Unit = {},
     onCreateRoutine: () -> Unit,
     onEditRoutine: (Long) -> Unit,
     onStartRoutine: (Long, Boolean) -> Unit,
     onNavigateToSchedule: () -> Unit = {},
+    onOpenQrScanner: () -> Unit = {},
     viewModel: RoutinesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var deleteTarget by remember { mutableStateOf<RoutineEntity?>(null) }
     var showImportDialog by remember { mutableStateOf(false) }
+    var importInitialCode by remember { mutableStateOf("") }
+
+    LaunchedEffect(autoImportCode) {
+        if (!autoImportCode.isNullOrBlank()) {
+            importInitialCode = autoImportCode
+            viewModel.previewImport(autoImportCode)
+            showImportDialog = true
+            onAutoImportConsumed()
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -71,7 +84,10 @@ fun RoutinesScreen(
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
-                        onClick = { showImportDialog = true },
+                        onClick = {
+                            importInitialCode = ""
+                            showImportDialog = true
+                        },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
                         border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
@@ -79,6 +95,16 @@ fun RoutinesScreen(
                         Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Importer", fontSize = 13.sp)
+                    }
+                    OutlinedButton(
+                        onClick = onOpenQrScanner,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = OrangeEnergy),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, OrangeEnergy),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Scanner", fontSize = 13.sp)
                     }
                     OutlinedButton(
                         onClick = onNavigateToSchedule,
@@ -206,16 +232,19 @@ fun RoutinesScreen(
     // Import dialog
     if (showImportDialog) {
         ImportRoutineDialog(
+            initialCode = importInitialCode,
             importPreview = uiState.importPreview,
             importError = uiState.importError,
             onPreview = viewModel::previewImport,
             onConfirm = {
                 viewModel.confirmImport()
                 showImportDialog = false
+                importInitialCode = ""
             },
             onDismiss = {
                 viewModel.clearImport()
                 showImportDialog = false
+                importInitialCode = ""
             }
         )
     }
@@ -223,6 +252,7 @@ fun RoutinesScreen(
 
 @Composable
 private fun ImportRoutineDialog(
+    initialCode: String = "",
     importPreview: com.dousports.app.utils.RoutineShareDto?,
     importError: String?,
     onPreview: (String) -> Unit,
@@ -230,7 +260,7 @@ private fun ImportRoutineDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var codeInput by remember { mutableStateOf("") }
+    var codeInput by remember { mutableStateOf(initialCode) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
