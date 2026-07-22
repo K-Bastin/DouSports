@@ -59,22 +59,15 @@ class ExercisesViewModel @Inject constructor(
     fun onSearchQueryChange(query: String) {
         searchQuery.value = query
         _uiState.update { it.copy(searchQuery = query) }
-        if (query.isNotBlank()) {
-            selectedBodyPart.value = null
-            selectedEquipment.value = null
-            _uiState.update { it.copy(selectedBodyPart = null, selectedEquipment = null) }
-        }
     }
 
     fun onBodyPartSelected(bodyPart: String?) {
         selectedBodyPart.value = bodyPart
-        _uiState.update { it.copy(selectedBodyPart = bodyPart, searchQuery = "") }
-        searchQuery.value = ""
+        _uiState.update { it.copy(selectedBodyPart = bodyPart) }
     }
 
     fun onEquipmentSelected(equipment: String?) {
         selectedEquipment.value = equipment
-        _uiState.update { it.copy(selectedEquipment = equipment, searchQuery = "") }
-        searchQuery.value = ""
+        _uiState.update { it.copy(selectedEquipment = equipment) }
     }
 }
