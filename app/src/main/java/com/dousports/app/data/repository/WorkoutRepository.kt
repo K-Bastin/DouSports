@@ -63,6 +63,12 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getSessionById(id: Long): WorkoutSessionEntity? = workoutDao.getSessionById(id)
 
+    fun getLatestUnfinishedSession(): Flow<WorkoutSessionEntity?> =
+        workoutDao.getLatestUnfinishedSession()
+
+    suspend fun getUnfinishedSessionForRoutine(routineId: Long): WorkoutSessionEntity? =
+        workoutDao.getUnfinishedSessionForRoutine(routineId)
+
     suspend fun insertSession(session: WorkoutSessionEntity): Long =
         workoutDao.insertSession(session)
 

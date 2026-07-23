@@ -57,6 +57,12 @@ interface WorkoutDao {
     @Query("SELECT DISTINCT exerciseId FROM workout_sets")
     suspend fun getAllTrackedExerciseIds(): List<String>
 
+    @Query("SELECT * FROM workout_sessions WHERE finishedAt IS NULL ORDER BY startedAt DESC LIMIT 1")
+    fun getLatestUnfinishedSession(): Flow<WorkoutSessionEntity?>
+
+    @Query("SELECT * FROM workout_sessions WHERE finishedAt IS NULL AND routineId = :routineId ORDER BY startedAt DESC LIMIT 1")
+    suspend fun getUnfinishedSessionForRoutine(routineId: Long): WorkoutSessionEntity?
+
     @Query("SELECT * FROM workout_sessions WHERE startedAt >= :startMs AND startedAt < :endMs ORDER BY startedAt ASC")
     suspend fun getSessionsInRange(startMs: Long, endMs: Long): List<WorkoutSessionEntity>
 

@@ -54,15 +54,23 @@ class TimedWorkoutViewModel @Inject constructor(
         viewModelScope.launch {
             val routine = repository.getRoutineById(routineId) ?: return@launch
             val exercises = repository.getExercisesForRoutineSync(routineId)
-            val startedAt = System.currentTimeMillis()
-            val sessionId = repository.insertSession(
-                WorkoutSessionEntity(
-                    routineId = routineId,
-                    routineName = routine.name,
-                    startedAt = startedAt,
-                    routineColor = routine.color
+            val existing = repository.getUnfinishedSessionForRoutine(routineId)
+            val startedAt: Long
+            val sessionId: Long
+            if (existing != null) {
+                startedAt = existing.startedAt
+                sessionId = existing.id
+            } else {
+                startedAt = System.currentTimeMillis()
+                sessionId = repository.insertSession(
+                    WorkoutSessionEntity(
+                        routineId = routineId,
+                        routineName = routine.name,
+                        startedAt = startedAt,
+                        routineColor = routine.color
+                    )
                 )
-            )
+            }
             val firstDuration = exercises.firstOrNull()?.durationSeconds ?: 45
             _uiState.update {
                 it.copy(

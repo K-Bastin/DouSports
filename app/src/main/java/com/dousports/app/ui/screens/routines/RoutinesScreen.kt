@@ -119,6 +119,19 @@ fun RoutinesScreen(
                 }
             }
 
+            val activeSession = uiState.activeSession
+            if (activeSession != null) {
+                ActiveSessionBanner(
+                    routineName = activeSession.routineName,
+                    onResume = {
+                        val routineId = activeSession.routineId ?: return@ActiveSessionBanner
+                        onStartRoutine(routineId, uiState.activeSessionIsTimed)
+                    },
+                    onAbandon = { viewModel.abandonActiveSession() },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             if (uiState.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = OrangeEnergy)
@@ -137,7 +150,8 @@ fun RoutinesScreen(
                             onEdit = { onEditRoutine(routine.id) },
                             onDelete = { deleteTarget = routine },
                             onDuplicate = { viewModel.duplicateRoutine(routine.id) },
-                            onShare = { viewModel.shareRoutine(routine.id) }
+                            onShare = { viewModel.shareRoutine(routine.id) },
+                            startEnabled = activeSession == null
                         )
                     }
                     item { Spacer(Modifier.height(72.dp)) }
@@ -339,13 +353,83 @@ private fun ImportRoutineDialog(
 }
 
 @Composable
+private fun ActiveSessionBanner(
+    routineName: String,
+    onResume: () -> Unit,
+    onAbandon: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showAbandonDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = OrangeEnergy.copy(alpha = 0.12f)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.FitnessCenter,
+                contentDescription = null,
+                tint = OrangeEnergy,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Séance en cours",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = OrangeEnergy,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    routineName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(
+                onClick = { showAbandonDialog = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) { Text("Abandonner", fontSize = 12.sp) }
+            Button(
+                onClick = onResume,
+                colors = ButtonDefaults.buttonColors(containerColor = OrangeEnergy),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) { Text("Reprendre", fontSize = 12.sp) }
+        }
+    }
+
+    if (showAbandonDialog) {
+        AlertDialog(
+            onDismissRequest = { showAbandonDialog = false },
+            title = { Text("Abandonner la séance ?") },
+            text = { Text("La séance \"$routineName\" en cours sera supprimée définitivement.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { showAbandonDialog = false; onAbandon() }
+                ) { Text("Abandonner", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAbandonDialog = false }) { Text("Annuler") }
+            }
+        )
+    }
+}
+
+@Composable
 private fun RoutineListCard(
     routine: RoutineEntity,
     onStart: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onDuplicate: () -> Unit = {},
-    onShare: () -> Unit = {}
+    onShare: () -> Unit = {},
+    startEnabled: Boolean = true
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -391,8 +475,12 @@ private fun RoutineListCard(
                     )
                 }
             }
-            IconButton(onClick = onStart) {
-                Icon(Icons.Default.PlayArrow, "Démarrer", tint = OrangeEnergy)
+            IconButton(onClick = onStart, enabled = startEnabled) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    "Démarrer",
+                    tint = if (startEnabled) OrangeEnergy else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                )
             }
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
