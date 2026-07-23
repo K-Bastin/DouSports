@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dousports.app.data.local.entity.RoutineEntity
 import com.dousports.app.data.local.entity.RoutineExerciseEntity
+import com.dousports.app.data.local.entity.WorkoutSessionEntity
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.utils.RoutineShareDto
 import com.dousports.app.utils.RoutineShareManager
@@ -20,7 +21,9 @@ data class RoutinesUiState(
     val shareQr: Bitmap? = null,
     val shareRoutineName: String? = null,
     val importError: String? = null,
-    val importPreview: RoutineShareDto? = null
+    val importPreview: RoutineShareDto? = null,
+    val activeSession: WorkoutSessionEntity? = null,
+    val activeSessionIsTimed: Boolean = false
 )
 
 @HiltViewModel
@@ -38,6 +41,19 @@ class RoutinesViewModel @Inject constructor(
                 _uiState.update { it.copy(routines = routines, isLoading = false) }
             }
         }
+        viewModelScope.launch {
+            repository.getLatestUnfinishedSession().collect { session ->
+                val isTimed = session?.routineId?.let {
+                    repository.getRoutineById(it)?.isTimed
+                } ?: false
+                _uiState.update { it.copy(activeSession = session, activeSessionIsTimed = isTimed) }
+            }
+        }
+    }
+
+    fun abandonActiveSession() {
+        val session = _uiState.value.activeSession ?: return
+        viewModelScope.launch { repository.deleteSession(session) }
     }
 
     fun deleteRoutine(routine: RoutineEntity) {
