@@ -13,6 +13,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.dousports.app.ui.screens.exercises.ExerciseDetailScreen
 import com.dousports.app.ui.screens.exercises.ExercisesScreen
+import com.dousports.app.ui.screens.history.SessionDetailScreen
 import com.dousports.app.ui.screens.history.WorkoutHistoryScreen
 import com.dousports.app.ui.screens.home.HomeScreen
 import com.dousports.app.ui.screens.profile.ProfileScreen
@@ -51,6 +52,9 @@ sealed class Screen(val route: String) {
     object Stats : Screen("stats")
     object Profile : Screen("profile")
     object WorkoutHistory : Screen("workout-history")
+    object SessionDetail : Screen("session-detail/{sessionId}") {
+        fun createRoute(sessionId: Long) = "session-detail/$sessionId"
+    }
     object WeeklySchedule : Screen("weekly-schedule")
     object Update : Screen("update")
     object QrScanner : Screen("qr-scanner")
@@ -328,7 +332,19 @@ fun DouSportsNavGraph(onNavControllerReady: (NavController) -> Unit = {}) {
             }
 
             composable(Screen.WorkoutHistory.route) {
-                WorkoutHistoryScreen(onBack = { navController.popBackStack() })
+                WorkoutHistoryScreen(
+                    onBack = { navController.popBackStack() },
+                    onSessionClick = { sessionId ->
+                        navController.navigate(Screen.SessionDetail.createRoute(sessionId))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.SessionDetail.route,
+                arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+            ) {
+                SessionDetailScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Screen.Update.route) {
