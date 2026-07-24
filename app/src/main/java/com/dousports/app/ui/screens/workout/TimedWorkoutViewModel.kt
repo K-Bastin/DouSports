@@ -12,13 +12,16 @@ import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.services.WorkoutForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 enum class TimedPhase { READY, EXERCISE, REST, FINISHED }
@@ -286,6 +289,12 @@ class TimedWorkoutViewModel @Inject constructor(
         super.onCleared()
         phaseJob?.cancel()
         globalTimerJob?.cancel()
+        val currentState = _uiState.value
+        if (currentState.sessionId != null && currentState.phase != TimedPhase.FINISHED && !currentState.isLoading) {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                persistTimerState(currentState)
+            }
+        }
         context.startService(WorkoutForegroundService.stopIntent(context))
     }
 }
