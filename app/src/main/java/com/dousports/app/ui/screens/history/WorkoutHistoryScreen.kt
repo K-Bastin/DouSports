@@ -1,9 +1,5 @@
 package com.dousports.app.ui.screens.history
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,12 +13,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
-import com.dousports.app.data.local.entity.WorkoutSetEntity
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.ui.theme.OrangeEnergy
 import com.dousports.app.utils.toDurationString
@@ -34,10 +28,7 @@ import java.util.*
 import javax.inject.Inject
 
 data class WorkoutHistoryUiState(
-    val sessions: List<WorkoutSessionEntity> = emptyList(),
-    val expandedSessionId: Long? = null,
-    val setsForExpanded: List<WorkoutSetEntity> = emptyList(),
-    val isLoadingSets: Boolean = false
+    val sessions: List<WorkoutSessionEntity> = emptyList()
 )
 
 @HiltViewModel
@@ -56,26 +47,8 @@ class WorkoutHistoryViewModel @Inject constructor(
         }
     }
 
-    fun toggleSession(session: WorkoutSessionEntity) {
-        val current = _state.value
-        if (current.expandedSessionId == session.id) {
-            _state.update { it.copy(expandedSessionId = null, setsForExpanded = emptyList()) }
-            return
-        }
-        _state.update { it.copy(expandedSessionId = session.id, isLoadingSets = true, setsForExpanded = emptyList()) }
-        viewModelScope.launch {
-            val sets = repository.getSetsForSessionSync(session.id)
-            _state.update { it.copy(setsForExpanded = sets, isLoadingSets = false) }
-        }
-    }
-
     fun deleteSession(session: WorkoutSessionEntity) {
-        viewModelScope.launch {
-            repository.deleteSession(session)
-            if (_state.value.expandedSessionId == session.id) {
-                _state.update { it.copy(expandedSessionId = null, setsForExpanded = emptyList()) }
-            }
-        }
+        viewModelScope.launch { repository.deleteSession(session) }
     }
 }
 
@@ -83,6 +56,7 @@ class WorkoutHistoryViewModel @Inject constructor(
 @Composable
 fun WorkoutHistoryScreen(
     onBack: () -> Unit,
+    onSessionClick: (Long) -> Unit = {},
     viewModel: WorkoutHistoryViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -140,14 +114,9 @@ fun WorkoutHistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(state.sessions, key = { it.id }) { session ->
-                    val isExpanded = state.expandedSessionId == session.id
-                    val sets = if (isExpanded) state.setsForExpanded else emptyList()
                     SessionHistoryCard(
                         session = session,
-                        isExpanded = isExpanded,
-                        sets = sets,
-                        isLoadingSets = state.isLoadingSets && isExpanded,
-                        onToggle = { viewModel.toggleSession(session) },
+                        onClick = { onSessionClick(session.id) },
                         onDelete = { viewModel.deleteSession(session) }
                     )
                 }
@@ -159,15 +128,11 @@ fun WorkoutHistoryScreen(
 @Composable
 private fun SessionHistoryCard(
     session: WorkoutSessionEntity,
-    isExpanded: Boolean,
-    sets: List<WorkoutSetEntity>,
-    isLoadingSets: Boolean,
-    onToggle: () -> Unit,
+    onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     val dateFmt = remember { SimpleDateFormat("EEE d MMM yyyy", Locale.FRENCH) }
     val timeFmt = remember { SimpleDateFormat("HH:mm", Locale.FRENCH) }
-
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -176,10 +141,7 @@ private fun SessionHistoryCard(
             title = { Text("Supprimer la séance ?") },
             text = { Text("Cette action est irréversible.") },
             confirmButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    onDelete()
-                }) {
+                TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
                     Text("Supprimer", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -192,140 +154,53 @@ private fun SessionHistoryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle() },
+            .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        session.routineName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        dateFmt.format(Date(session.startedAt)) +
-                                "  •  " + timeFmt.format(Date(session.startedAt)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (session.durationSeconds > 0) {
-                    Text(
-                        session.durationSeconds.toDurationString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OrangeEnergy,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                IconButton(
-                    onClick = { showDeleteDialog = true },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Supprimer",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-                Icon(
-                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    session.routineName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    dateFmt.format(Date(session.startedAt)) +
+                            "  •  " + timeFmt.format(Date(session.startedAt)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
-                Column {
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(10.dp))
-
-                    if (isLoadingSets) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = OrangeEnergy,
-                                strokeWidth = 2.dp
-                            )
-                        }
-                    } else if (sets.isEmpty()) {
-                        Text(
-                            "Aucune série enregistrée",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        // Group sets by exercise name
-                        val grouped = sets.groupBy { it.exerciseName }
-                        grouped.entries.forEach { (exerciseName, exerciseSets) ->
-                            Text(
-                                exerciseName,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = OrangeEnergy,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            exerciseSets.forEach { set ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 1.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        "Série ${set.setNumber}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        buildString {
-                                            append("${set.reps} reps")
-                                            if (set.weight > 0) append("  ·  %.1f kg".format(set.weight))
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                        }
-
-                        val totalVolume = sets.sumOf { (it.reps * it.weight).toDouble() }.toFloat()
-                        if (totalVolume > 0) {
-                            HorizontalDivider()
-                            Spacer(Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    "Volume total",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    "%.0f kg".format(totalVolume),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = OrangeEnergy
-                                )
-                            }
-                        }
-                    }
-                }
+            if (session.durationSeconds > 0) {
+                Text(
+                    session.durationSeconds.toDurationString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OrangeEnergy,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.width(8.dp))
             }
+            IconButton(
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Supprimer",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
