@@ -166,11 +166,9 @@ class TimedWorkoutViewModel @Inject constructor(
         _uiState.update { it.copy(shouldVibrate = false) }
     }
 
-    // Single continuous loop — no self-cancellation.
     private fun startPhaseCountdown() {
         phaseJob?.cancel()
         phaseJob = viewModelScope.launch {
-            var tickCount = 0
             while (true) {
                 delay(1000)
                 val state = _uiState.value
@@ -182,11 +180,9 @@ class TimedWorkoutViewModel @Inject constructor(
                     val newState = _uiState.value
                     if (newState.phase == TimedPhase.FINISHED) break
                     persistTimerState(newState)
-                    tickCount = 0
                 } else {
                     _uiState.update { it.copy(phaseRemaining = remaining) }
-                    tickCount++
-                    if (tickCount % 5 == 0) persistTimerState(_uiState.value)
+                    persistTimerState(_uiState.value)
                 }
             }
         }

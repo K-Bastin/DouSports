@@ -153,6 +153,9 @@ fun DouSportsNavGraph(onNavControllerReady: (NavController) -> Unit = {}) {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onSessionClick = { sessionId ->
+                        navController.navigate(Screen.SessionDetail.createRoute(sessionId))
                     }
                 )
             }
