@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dousports.app.data.local.entity.RoutineExerciseEntity
 import com.dousports.app.data.local.entity.WorkoutSessionEntity
+import com.dousports.app.data.preferences.SavedTimerState
+import com.dousports.app.data.preferences.TimerStateStore
 import com.dousports.app.data.repository.WorkoutRepository
 import com.dousports.app.services.WorkoutForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +43,7 @@ data class TimedWorkoutUiState(
 @HiltViewModel
 class TimedWorkoutViewModel @Inject constructor(
     private val repository: WorkoutRepository,
+    private val timerStateStore: TimerStateStore,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -71,21 +74,52 @@ class TimedWorkoutViewModel @Inject constructor(
                     )
                 )
             }
+
+            val saved = if (existing != null) timerStateStore.load(sessionId) else null
             val firstDuration = exercises.firstOrNull()?.durationSeconds ?: 45
-            _uiState.update {
-                it.copy(
-                    routineId = routineId,
-                    routineName = routine.name,
-                    routineColor = routine.color,
-                    exercises = exercises,
-                    phase = TimedPhase.READY,
-                    phaseRemaining = firstDuration,
-                    phaseDuration = firstDuration,
-                    sessionId = sessionId,
-                    sessionStartedAt = startedAt,
-                    isLoading = false
-                )
+
+            if (saved != null) {
+                val restoredPhase = TimedPhase.entries.getOrElse(saved.phaseOrdinal) { TimedPhase.READY }
+                val restoredIndex = saved.exerciseIndex.coerceIn(0, (exercises.size - 1).coerceAtLeast(0))
+                val restoredRemaining = saved.phaseRemainingSeconds.coerceAtLeast(1)
+                val phaseDuration = when (restoredPhase) {
+                    TimedPhase.EXERCISE -> exercises.getOrNull(restoredIndex)?.durationSeconds ?: 45
+                    TimedPhase.REST -> exercises.getOrNull((restoredIndex - 1).coerceAtLeast(0))?.restSeconds?.takeIf { it > 0 } ?: 30
+                    else -> firstDuration
+                }
+                _uiState.update {
+                    it.copy(
+                        routineId = routineId,
+                        routineName = routine.name,
+                        routineColor = routine.color,
+                        exercises = exercises,
+                        currentExerciseIndex = restoredIndex,
+                        phase = restoredPhase,
+                        phaseRemaining = restoredRemaining,
+                        phaseDuration = phaseDuration,
+                        sessionId = sessionId,
+                        sessionStartedAt = startedAt,
+                        isLoading = false,
+                        isPaused = true
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        routineId = routineId,
+                        routineName = routine.name,
+                        routineColor = routine.color,
+                        exercises = exercises,
+                        phase = TimedPhase.READY,
+                        phaseRemaining = firstDuration,
+                        phaseDuration = firstDuration,
+                        sessionId = sessionId,
+                        sessionStartedAt = startedAt,
+                        isLoading = false
+                    )
+                }
             }
+
             ContextCompat.startForegroundService(context, WorkoutForegroundService.startIntent(context))
         }
     }
@@ -112,13 +146,16 @@ class TimedWorkoutViewModel @Inject constructor(
         phaseJob?.cancel()
         globalTimerJob?.cancel()
         _uiState.update { it.copy(isPaused = true) }
+        viewModelScope.launch { persistTimerState(_uiState.value) }
     }
 
     fun skipPhase() {
         phaseJob?.cancel()
         advancePhaseState()
-        if (_uiState.value.phase != TimedPhase.FINISHED && !_uiState.value.isPaused) {
-            startPhaseCountdown()
+        val state = _uiState.value
+        if (state.phase != TimedPhase.FINISHED) {
+            viewModelScope.launch { persistTimerState(state) }
+            if (!state.isPaused) startPhaseCountdown()
         }
     }
 
@@ -126,10 +163,11 @@ class TimedWorkoutViewModel @Inject constructor(
         _uiState.update { it.copy(shouldVibrate = false) }
     }
 
-    // Single continuous loop — never calls itself recursively, so no self-cancellation.
+    // Single continuous loop — no self-cancellation.
     private fun startPhaseCountdown() {
         phaseJob?.cancel()
         phaseJob = viewModelScope.launch {
+            var tickCount = 0
             while (true) {
                 delay(1000)
                 val state = _uiState.value
@@ -138,10 +176,14 @@ class TimedWorkoutViewModel @Inject constructor(
                 if (remaining <= 0) {
                     _uiState.update { it.copy(phaseRemaining = 0, shouldVibrate = true) }
                     advancePhaseState()
-                    if (_uiState.value.phase == TimedPhase.FINISHED) break
-                    // Loop continues for the new phase — phaseRemaining already updated.
+                    val newState = _uiState.value
+                    if (newState.phase == TimedPhase.FINISHED) break
+                    persistTimerState(newState)
+                    tickCount = 0
                 } else {
                     _uiState.update { it.copy(phaseRemaining = remaining) }
+                    tickCount++
+                    if (tickCount % 5 == 0) persistTimerState(_uiState.value)
                 }
             }
         }
@@ -195,6 +237,7 @@ class TimedWorkoutViewModel @Inject constructor(
         val state = _uiState.value
         val sessionId = state.sessionId ?: return
         viewModelScope.launch {
+            timerStateStore.clear()
             repository.updateSession(
                 WorkoutSessionEntity(
                     id = sessionId,
@@ -218,12 +261,25 @@ class TimedWorkoutViewModel @Inject constructor(
         globalTimerJob?.cancel()
         context.startService(WorkoutForegroundService.stopIntent(context))
         viewModelScope.launch {
+            timerStateStore.clear()
             val sessionId = _uiState.value.sessionId
             if (sessionId != null) {
                 repository.getSessionById(sessionId)?.let { repository.deleteSession(it) }
             }
             onDone()
         }
+    }
+
+    private suspend fun persistTimerState(state: TimedWorkoutUiState) {
+        val sessionId = state.sessionId ?: return
+        timerStateStore.save(
+            SavedTimerState(
+                sessionId = sessionId,
+                exerciseIndex = state.currentExerciseIndex,
+                phaseOrdinal = state.phase.ordinal,
+                phaseRemainingSeconds = state.phaseRemaining
+            )
+        )
     }
 
     override fun onCleared() {
