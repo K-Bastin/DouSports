@@ -55,6 +55,7 @@ class TimedWorkoutViewModel @Inject constructor(
 
     private var phaseJob: Job? = null
     private var globalTimerJob: Job? = null
+    private var isCancelled = false
 
     fun loadRoutine(routineId: Long) {
         viewModelScope.launch {
@@ -121,6 +122,9 @@ class TimedWorkoutViewModel @Inject constructor(
                         isLoading = false
                     )
                 }
+                // Anchor DataStore to this session immediately — prevents a stale session ID
+                // left by a previous onCleared() from causing a mismatch on the next Reprendre.
+                persistTimerState(_uiState.value)
             }
 
             ContextCompat.startForegroundService(context, WorkoutForegroundService.startIntent(context))
@@ -256,6 +260,7 @@ class TimedWorkoutViewModel @Inject constructor(
     }
 
     fun cancelWorkout(onDone: () -> Unit) {
+        isCancelled = true
         phaseJob?.cancel()
         globalTimerJob?.cancel()
         context.startService(WorkoutForegroundService.stopIntent(context))
@@ -286,7 +291,7 @@ class TimedWorkoutViewModel @Inject constructor(
         phaseJob?.cancel()
         globalTimerJob?.cancel()
         val currentState = _uiState.value
-        if (currentState.sessionId != null && currentState.phase != TimedPhase.FINISHED && !currentState.isLoading) {
+        if (!isCancelled && currentState.sessionId != null && currentState.phase != TimedPhase.FINISHED && !currentState.isLoading) {
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 persistTimerState(currentState)
             }
